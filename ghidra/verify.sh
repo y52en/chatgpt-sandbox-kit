@@ -1,61 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# shellcheck source=common.sh
-source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
-usage() {
-  cat <<'EOF'
-Usage: verify.sh [--full]
-
-Checks the current Ghidra installation. --full additionally builds a tiny ELF,
-runs real headless analysis, and confirms the native decompiler can export a
-known function.
-EOF
-}
-
-full=false
-while (($#)); do
-  case "$1" in
-    --full) full=true; shift ;;
-    -h|--help) usage; exit 0 ;;
-    *) die "unknown argument: $1" ;;
-  esac
-done
-
-[[ -x "$GHIDRA_HOME/support/analyzeHeadless" ]] || die "Ghidra is not installed at $GHIDRA_HOME"
-require_command java
-require_command python3
-
-java_major="$(java_major_version)"
-log "Java major: $java_major"
-log "Ghidra home: $GHIDRA_HOME"
-
-find -L "$GHIDRA_HOME" -type f \( -name decompile -o -name decompile.exe \) -print -quit | grep -q . || \
-  die 'native Ghidra decompiler executable was not found'
-
-if [[ -x "$GHIDRA_PYGHIDRA_VENV/bin/python" ]]; then
-  GHIDRA_INSTALL_DIR="$GHIDRA_HOME" "$GHIDRA_PYGHIDRA_VENV/bin/python" - <<'PY'
-import pyghidra
-print(f"PyGhidra {pyghidra.__version__}")
-PY
+if [[ -n "${GHIDRA_WORK_DIR:-}" ]]; then
+  WORK_DIR=$GHIDRA_WORK_DIR
+elif [[ -d /mnt/data/ghidra-kit ]]; then
+  WORK_DIR=/mnt/data/ghidra-kit
 else
-  warn 'PyGhidra venv is not installed (this is expected only if setup used --skip-pyghidra).'
+  WORK_DIR="$PWD/.tools/ghidra"
 fi
+ENV_FILE="$WORK_DIR/env.sh"
+[[ -f "$ENV_FILE" ]] || { echo "error: $ENV_FILE not found; run ghidra/setup.sh first" >&2; exit 1; }
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+[[ -x "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" ]] || { echo 'error: analyzeHeadless missing' >&2; exit 1; }
+[[ -x "$PYGHIDRA_VENV/bin/python" ]] || { echo 'error: PyGhidra venv missing' >&2; exit 1; }
 
-if [[ "$full" == false ]]; then
-  log 'quick verification passed'
-  exit 0
-fi
-
-require_command cc
-work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
-cat > "$work/smoke.c" <<'C'
-#include <stdio.h>
-__attribute__((noinline)) int sandbox_add(int a, int b) { return a + b; }
-int main(void) { printf("%d\n", sandbox_add(20, 22)); return 0; }
-C
-cc -g -O0 "$work/smoke.c" -o "$work/smoke"
-"$GHIDRA_KIT_DIR/decompile.sh" "$work/smoke" "$work/smoke.c.out" >/dev/null
-grep -q 'sandbox_add' "$work/smoke.c.out" || die 'full smoke test did not decompile sandbox_add'
-log 'full verification passed'
+java -version
+HEADLESS_OUTPUT=$("$GHIDRA_INSTALL_DIR/support/analyzeHeadless" 2>&1 || true)
+grep -Fq 'Usage:' <<<"$HEADLESS_OUTPUT" || { echo 'error: analyzeHeadless did not start correctly' >&2; exit 1; }
+GHIDRA_INSTALL_DIR="$GHIDRA_INSTALL_DIR" "$PYGHIDRA_VENV/bin/python" -P - <<'PYCODE'
+import jpype
+import pyghidra
+pyghidra.start()
+from ghidra.framework import Application
+from ghidra.program.model.address import Address
+print('PyGhidra:', pyghidra.__version__)
+print('JPype:', jpype.__version__)
+print('Ghidra:', Application.getApplicationVersion())
+print('Ghidra Java class:', Address)
+PYCODE

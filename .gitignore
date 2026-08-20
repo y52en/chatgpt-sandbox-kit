@@ -1,19 +1,18 @@
-# Local tool installations and downloaded artifacts
+# Local tool installations and transferred archives
 .tools/
 *.zip
-*.part-*
+*.part*
 
 # Python
+.venv/
 __pycache__/
 *.py[cod]
-.venv/
 
 # Ghidra projects / generated output
 *.gpr
 *.rep/
-*.decompiled.c
 
-# OS/editor noise
+# OS / editor noise
 .DS_Store
 .vscode/
 .idea/

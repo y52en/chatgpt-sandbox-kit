@@ -1,289 +1,133 @@
-# ChatGPT LinuxサンドボックスでGhidraを使う
+# Ghidra / PyGhidra for ChatGPT Linux sandbox
 
-このディレクトリは、外向きネットワークが制限されることがあるChatGPTのLinuxサンドボックスで、Ghidraを検証可能な形でセットアップ・操作するためのものです。
+このディレクトリは、ChatGPT の Linux コンテナで **外部ダウンロードに依存せず** Ghidra と PyGhidra を使うための最小構成です。
 
-headless解析、デコンパイル一括出力、PyGhidraに対応します。
+## 前提
 
-## 最短手順
+Ghidra の公式 ZIP 自体はこのリポジトリから取得しません。Google Drive、会話への添付など、利用できる方法で先にコンテナへ持ち込んでください。
 
-```bash
-./ghidra/fetch.sh
-./ghidra/setup.sh
-./ghidra/verify.sh --full
-./ghidra/decompile.sh ./対象バイナリ
-```
+現在の ChatGPT の Google Drive 連携では、単一ファイルが約 256 MiB を超えると `413 File too large` になる場合があります。その場合は、元 ZIP を **250 MB 前後以下の part** に分割して Drive に置く方法が安定です。
 
-サンドボックスから`ghidra-dist`にも直接アクセスできない場合は、`manifest.json`とすべての`part-*`をファイル転送で持ち込みます。
-
-```bash
-./ghidra/assemble.sh \
-  --manifest /path/to/manifest.json \
-  --parts-dir /path/to/parts \
-  --output /tmp/ghidra.zip
-
-./ghidra/setup.sh --archive /tmp/ghidra.zip
-```
-
-## Ghidra本体をmainに入れない理由
-
-Ghidraの公式ZIPは500MiBを大きく超え、GitHubの通常Git objectの上限より大きいため、そのまま`main`へcommitしません。
-
-代わりに`.github/workflows/update-ghidra-dist.yml`が毎日最新版を確認し、公式ZIPを**改変せず64MiB単位に分割**して`ghidra-dist`という専用branchへ配置します。
-
-さらに`ghidra-dist`は通常の履歴を積み上げるbranchではなく、更新のたびに新しいorphan commitを作成してforce-pushします。そのため、旧Ghidraの約500MiB単位の履歴が延々と蓄積しません。
-
-## 毎日の自動更新
-
-GitHub Actionsは毎日**06:17 JST**に動きます。
-
-処理は次の通りです。
-
-1. `NationalSecurityAgency/ghidra`の最新stable ReleaseをGitHub APIから取得
-2. `ghidra_*_PUBLIC_*.zip`を特定
-3. GitHub Release assetのSHA-256 digestを取得（無い場合だけrelease本文のSHA-256へfallback）
-4. GitHub-hosted runner上で公式assetを取得
-5. sizeとSHA-256を照合
-6. ZIP内の`Ghidra/application.properties`を読み、Ghidra版と必要Java版を確認
-7. そのJava版をActions上へセットアップ
-8. **公式ZIPそのものを一度インストールし、`analyzeHeadless`とnative Decompilerの実smoke testを実行**
-9. 公式ZIPのbytesを64MiBごとにsplit
-10. chunkごとのsize/SHA-256を計算
-11. 全chunkを再結合
-12. 完全ZIPのSHA-256を再確認し、さらに`cmp`で元の公式ZIPとbyte-for-byte一致を確認
-13. ここまで全成功した場合だけ`ghidra-dist`へpublish
-
-現在とtag/SHA-256の両方が一致していれば、大きなZIPを再downloadせず何もしません。
-
-## `ghidra-dist`の形
+例:
 
 ```text
-ghidra-dist
-└── current/
-    ├── manifest.json
-    ├── part-000
-    ├── part-001
-    ├── ...
-    └── part-00N
+ghidra_12.1.3_PUBLIC_20260817.zip.part001
+ghidra_12.1.3_PUBLIC_20260817.zip.part002
+ghidra_12.1.3_PUBLIC_20260817.zip.part003
 ```
 
-`manifest.json`には少なくとも以下を記録します。
+Drive コネクタから取得した `application/octet-stream` の part は、コンテナ側で `.bin` が末尾に付くことがあります。`setup.sh` は `part002.bin` のような名前でも問題なく扱えます。
 
-- upstream repository
-- Release tag
-- upstream Release URL
-- 公開日時
-- Ghidra version
-- 元ZIPのfilename
-- 元ZIPのsize
-- 元ZIPのSHA-256
-- 必要Java major version
-- chunk size
-- 各chunkのfilename / size / SHA-256
+## ChatGPT + Google Drive での流れ
 
-つまり`ghidra-dist`自体を信頼する必要はありません。復元後のZIPが**公式Releaseで期待されるSHA-256**に一致しなければ利用されません。
-
-## 取得
-
-通常は次だけです。
+1. Ghidra ZIP をローカルPCで分割する。
+2. part ファイルを Google Drive にアップロードする。
+3. ChatGPT に各 part を Drive から取得させる。
+4. `/mnt/data` に part が揃ったことを確認する。
+5. `setup.sh` に part を順番を気にせず渡す。
 
 ```bash
-./ghidra/fetch.sh
+./ghidra/setup.sh \
+  --sha256 93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54 \
+  /mnt/data/ghidra_12.1.3_PUBLIC_20260817.zip.part001 \
+  /mnt/data/ghidra_12.1.3_PUBLIC_20260817.zip.part002.bin \
+  /mnt/data/ghidra_12.1.3_PUBLIC_20260817.zip.part003.bin
 ```
 
-まず、
+`setup.sh` は入力を `sort -V` で並べてから連結するため、引数の順序は問いません。
 
-```text
-https://raw.githubusercontent.com/y52en/chatgpt-sandbox-kit/ghidra-dist/current/manifest.json
-```
+SHA-256 が不明な別バージョンを使う場合は `--sha256` を省略できます。ただし、出所の検証が必要な場合は信頼できる場所で確認したハッシュを指定してください。
 
-を見に行き、各chunkを取得・検証・再結合します。
-
-`ghidra-dist`がまだ存在しない、またはアクセスできない場合は`version.env`に固定した公式Release URLへfallbackします。
-
-### 取得元を変更する
-
-split配布元：
+単一 ZIP がすでに `/mnt/data` にある場合:
 
 ```bash
-GHIDRA_DIST_BASE_URL='https://example/path/current' ./ghidra/fetch.sh
+./ghidra/setup.sh /mnt/data/ghidra_12.1.3_PUBLIC_20260817.zip
 ```
 
-直接ZIPのtransportのみ変更：
+## setup.sh が行うこと
+
+- part 群を1つのZIPへ復元
+- 完成ZIPの SHA-256 を表示・任意で照合
+- `unzip -t` によるZIP整合性検査
+- Ghidra展開
+- `Ghidra/application.properties` から以下を確認
+  - Ghidraバージョン
+  - 最低Javaバージョン
+  - 対応Pythonバージョン
+- Python venv 作成
+- Ghidraに同梱された `PyGhidra/pypkg/dist` の wheel だけを使い、`pip --no-index` でPyGhidraをインストール
+- JVMを起動し `ghidra.framework.Application` をロードして実動確認
+
+ネットワークから `pip install` したり、GitHub等からGhidraをダウンロードしたりしません。
+
+既定の作業先は ChatGPT sandbox では `/mnt/data/ghidra-kit` です。変更したい場合:
 
 ```bash
-GHIDRA_DOWNLOAD_URL='https://mirror.example/ghidra.zip' \
-  ./ghidra/fetch.sh --official
+GHIDRA_WORK_DIR=/mnt/data/my-ghidra ./ghidra/setup.sh /mnt/data/ghidra*.part*
 ```
 
-後者でも許可するSHA-256は変わりません。proxy/mirrorから別の内容が返れば拒否します。
+## PyGhidraを使う
 
-## 完全オフラインで再結合
-
-小さいraw GitHubファイルならChatGPT側の別のファイル取得手段で搬入できる場合があります。その場合、`manifest.json`と全chunkを同じディレクトリに置き、
+公式PyGhidra CLI:
 
 ```bash
-./ghidra/assemble.sh \
-  --manifest ./manifest.json \
-  --parts-dir . \
-  --output /tmp/ghidra.zip
+./ghidra/pyghidra.sh --help
 ```
 
-だけで復元できます。
-
-`assemble.sh`は、
-
-- 各partのsize
-- 各partのSHA-256
-- 結合後ZIPのSHA-256
-
-を順番に確認します。1byteでも改変されていれば失敗します。
-
-## セットアップ
-
-自動取得：
+バイナリを開いて解析し、REPLへ入る:
 
 ```bash
-./ghidra/setup.sh
+./ghidra/pyghidra.sh /mnt/data/sample.bin
 ```
 
-持ち込んだZIP：
+PythonスクリプトからPyGhidra APIを使う:
+
+```python
+import pyghidra
+
+pyghidra.start()
+
+from ghidra.framework import Application
+print(Application.getApplicationVersion())
+```
+
+実行:
 
 ```bash
-./ghidra/setup.sh --archive /path/to/ghidra.zip
+./ghidra/python.sh script.py
 ```
 
-split配布から復元したZIPには`<archive>.manifest.json`が横に保存されます。`setup.sh`はそこからversion・SHA-256・必要Java版を読むため、例えば将来Ghidra 12.2が出ても、`main`の`version.env`更新を待たず最新版を扱えます。
-
-sidecar manifestがないZIPについては、`version.env`に固定した既知の公式版として検証します。
-
-インストール先：
-
-```text
-.tools/ghidra/
-├── downloads/
-├── installs/
-│   └── <version>/
-├── current -> installs/<version>/
-└── pyghidra-venv/
-```
-
-## PyGhidra
-
-Ghidraに同梱されているwheelを利用するため、PyPIへの接続は不要です。
-
-内部的には、
+環境を直接使いたい場合は生成されたファイルを source できます。
 
 ```bash
-python3 -m pip install --no-index \
-  -f <GhidraInstallDir>/Ghidra/Features/PyGhidra/pypkg/dist \
-  pyghidra
+source /mnt/data/ghidra-kit/env.sh
+"$PYGHIDRA_VENV/bin/python"
 ```
 
-という公式のオフライン方式を利用します。
+ラッパーは Python の safe-path (`-P`) を使います。これはリポジトリ自身の `ghidra/` ディレクトリが PyGhidra の Java パッケージ import と衝突するのを防ぐためです。
 
-Pythonスクリプト：
-
-```bash
-./ghidra/pyghidra.sh script.py
-```
-
-対話環境：
-
-```bash
-./ghidra/pyghidra.sh
-```
-
-## 動作確認
-
-軽量確認：
+## 確認
 
 ```bash
 ./ghidra/verify.sh
 ```
 
-実Decompilerまで確認：
+`verify.sh` は Java、`analyzeHeadless`、PyGhidra、JPype、Ghidra Javaクラスのロードを確認します。
 
-```bash
-./ghidra/verify.sh --full
-```
+## Ghidra 12.1.3 で実際に確認した構成
 
-`--full`では、その場で小さなELFをコンパイルし、
+この手順は以下で実動確認しています。
 
-```text
-ELF生成
-↓
-analyzeHeadless
-↓
-auto-analysis
-↓
-native Ghidra Decompiler
-↓
-ExportDecompilation.java
-↓
-sandbox_add関数がC風コードに出たか確認
-```
+- Ghidra 12.1.3 PUBLIC (`20260817`)
+- ZIPサイズ: `569445154` bytes
+- SHA-256: `93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54`
+- Java: OpenJDK 21
+- Python: 3.13
+- PyGhidra: 3.1.0
+- JPype: 1.5.2
 
-まで実行します。
+Ghidra 12.1.3 自体の `application.properties` では Python 3.9〜3.14、Java 21以上が指定されています。
 
-## バイナリ解析
+## CIについて
 
-```bash
-./ghidra/analyze.sh ./program
-```
-
-一時Ghidra projectを作成し、終了後削除します。
-
-## デコンパイル一括出力
-
-```bash
-./ghidra/decompile.sh ./program
-```
-
-デフォルト出力：
-
-```text
-./program.decompiled.c
-```
-
-出力先指定：
-
-```bash
-./ghidra/decompile.sh ./program /tmp/program.c
-```
-
-`ExportDecompilation.java`がGhidraで認識された全functionを列挙し、成功したものをC風コードとして1ファイルへ出します。
-
-## CI / テスト
-
-通常の`CI`では546MiB級のGhidraを毎回取得しません。代わりに、
-
-- shell構文
-- Python helper
-- Release resolver
-- mock Ghidra setup/analyze/decompile
-- split/reassemble
-- chunk改変検知
-- upstream digest不一致検知
-- 架空の将来版`99.1`をmanifest経由でインストールできること
-
-をオフラインで確認します。
-
-実Ghidraそのもののsmoke testはdaily updaterと手動`Ghidra real smoke test` workflowで行います。
-
-## 固定fallback版
-
-`version.env`には再現性と障害時fallbackのため、既知の公式版を固定しています。daily updaterの最新版とは役割が別です。
-
-最新版Releaseが更新されたからといって、この固定値を自動的に書き換える必要はありません。
-
-## 注意点
-
-- ChatGPTのLinux shell自体が外部ネットワークへ出られない場合、`fetch.sh`も直接通信できません。その場合はchunkを別経路で搬入して`assemble.sh`を使います。
-- GUI利用にはX11等が必要です。headless解析には不要です。
-- GPUが渡されていない環境でも通常のGhidra解析・Decompilerは利用できます。
-- Ghidra Debuggerの一部機能には追加native toolやネットワークが必要です。
-- `ghidra-dist`へのforce-pushをbranch protectionで禁止した場合、updaterはpublishできません。
-
-## ライセンス
-
-このkitの独自スクリプト・ドキュメントはMIT Licenseです。Ghidra本体はGhidra自身のライセンス・NOTICE等に従います。`ghidra-dist`は公式ZIPの内容を変更せず、transportのためにbyte列を分割したものです。
+GitHub Actions / CI は意図的にありません。大きな外部ファイルの取得・ミラー・配布を自動化せず、実際に sandbox へ持ち込めたローカルファイルだけを扱う方針です。
