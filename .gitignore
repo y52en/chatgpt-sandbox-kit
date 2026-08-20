@@ -17,3 +17,6 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+
+# Split third-party wheels intentionally tracked
+!third_party/wheels/*.part*

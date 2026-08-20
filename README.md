@@ -2,7 +2,7 @@
 
 Small, offline-first helpers for tools that need to run inside ChatGPT's Linux sandbox.
 
-The sandbox can run normal Linux, Java, and Python tooling, but transferring files into it is often more restrictive than running the tools themselves. This repository therefore avoids download automation and CI mirroring. Bring the required third-party artifact into the sandbox first, then use the local setup scripts.
+The sandbox can run normal Linux, Java, and Python tooling, but transferring files into it is often more restrictive than running the tools themselves. This repository keeps sandbox setup offline-first and can vendor selected third-party wheels as small Git-tracked parts.
 
 ## Ghidra / PyGhidra
 
@@ -35,8 +35,14 @@ unicorn-2.1.4-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 
 The `abi3` wheel works with CPython 3.7+ and the `manylinux_2_17_x86_64` build is compatible with the sandbox's x86-64 glibc environment.
 
-No GitHub Actions workflows or automatic external downloads are included.
+## Capstone / Keystone
+
+[`third_party/wheels/`](third_party/wheels/) vendors Linux x86_64 wheels for Capstone and Keystone Engine as parts of at most **1,000,000 bytes each**, keeping every binary part strictly below 1 MiB.
+
+`reassemble.sh` reconstructs the original wheels and verifies their SHA-256 values before offline installation. A weekly GitHub Actions workflow checks PyPI for newer stable CPython 3.13 / Linux x86_64-compatible wheels, verifies PyPI hashes, refreshes the split parts and license notices, smoke-tests both libraries, and commits only when an update is available.
+
+The sandbox itself does not need external package-index access to use the vendored wheels.
 
 ## License
 
-Original scripts and documentation in this repository are MIT-licensed. Ghidra, Unicorn Engine, and other third-party software remain under their own licenses.
+Original scripts and documentation in this repository are MIT-licensed. Ghidra, Unicorn Engine, Capstone, Keystone Engine, and other third-party software remain under their own licenses.
