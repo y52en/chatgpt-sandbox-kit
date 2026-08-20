@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate shell scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            bash -n "$file"
+          done < <(find . -type f -name '*.sh' -print0)
+
+      - name: Validate Python helpers
+        run: |
+          python3 -m py_compile \
+            ghidra/ci/package-release.py \
+            ghidra/ci/resolve-release.py \
+            ghidra/tests/resolve-release-smoke.py
+
+      - name: Release resolver smoke test
+        run: python3 ghidra/tests/resolve-release-smoke.py
+
+      - name: Mock Ghidra smoke test
+        run: bash ghidra/tests/mock-smoke.sh
+
+      - name: Distribution smoke test
+        run: bash ghidra/tests/dist-smoke.sh

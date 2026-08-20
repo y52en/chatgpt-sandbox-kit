@@ -1,0 +1,35 @@
+name: Ghidra real smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve latest Ghidra release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 ghidra/ci/resolve-release.py --github-output "$GITHUB_OUTPUT"
+
+      - name: Set up required Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.release.outputs.java_min }}
+
+      - name: Download, package, and smoke-test latest Ghidra
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 ghidra/ci/package-release.py \
+            --release-json "${{ steps.release.outputs.release_json }}" \
+            --output-dir "$RUNNER_TEMP/ghidra-dist" \
+            --smoke-test
