@@ -2,6 +2,7 @@
 .tools/
 *.zip
 *.part*
+*.whl
 
 # Python
 .venv/
