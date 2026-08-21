@@ -49,15 +49,21 @@ The recommended flow is:
 
 The wheels are intentionally **not vendored or split into Git-tracked parts**. GitHub repository-file retrieval is useful for source code and small text files, while Google Drive is the more practical binary transport into the sandbox.
 
-## Android Emulator / ADB
+## Android Emulator / ADB / APK CI
 
-[`android-emulator/`](android-emulator/) prepares locally transferred Linux Android Platform Tools and Android Emulator archives completely offline.
+[`android-emulator/`](android-emulator/) builds an offline Android test environment from locally transferred Linux Platform Tools, Android Emulator, and system-image archives.
 
-The current sandbox has been verified with Platform Tools 37.0.1 and Android Emulator 37.2.5. The helper scripts can reconstruct a split Emulator ZIP, validate SHA-256 and ZIP integrity, extract an SDK-like layout, smoke-test the ADB server, and verify the Emulator binary and its software-emulation option.
+The current sandbox has been verified end-to-end with Platform Tools 37.0.1, Android Emulator 37.2.5, and the Android 11 / API 30 / Google APIs / x86_64 system image. Despite `/dev/kvm` being unavailable, the AVD boots with QEMU TCG via `-accel off`; the measured first cold boot was about 8 minutes 9 seconds.
 
-The sandbox currently does **not** expose `/dev/kvm`, so hardware acceleration is unavailable. The tested Emulator supports `-accel off` / `-no-accel`; actual Android boot remains pending until a compatible system image is transferred into the sandbox.
+The helper scripts can:
 
-See [`android-emulator/README.ja.md`](android-emulator/README.ja.md) for the Japanese guide and exact hashes of the tested archives.
+1. reconstruct split Emulator and system-image ZIPs and verify SHA-256 / ZIP integrity;
+2. create an SDK-like tree and AVD without `sdkmanager` or `avdmanager`;
+3. launch a headless AVD and wait for stable Android framework readiness;
+4. install APKs while handling slow TCG dexopt/client teardown;
+5. launch an activity, save a screenshot and logcat, and fail on package-scoped crash/ANR markers.
+
+The tested API 30 image, APK installation path, and UI smoke test are documented in [`android-emulator/README.ja.md`](android-emulator/README.ja.md).
 
 ## License
 
