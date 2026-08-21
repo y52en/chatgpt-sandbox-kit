@@ -43,32 +43,62 @@ sandbox_kit_find_one() {
 }
 
 sandbox_kit_validate_parts() {
-  local start=-1 expected=-1 number path base
+  local expected_start= expected_count=
+  while (($#)); do
+    case "$1" in
+      --expected-start) (($# >= 2)) || { printf 'error: --expected-start requires a value\n' >&2; return 1; }; expected_start=$2; shift 2 ;;
+      --expected-count) (($# >= 2)) || { printf 'error: --expected-count requires a value\n' >&2; return 1; }; expected_count=$2; shift 2 ;;
+      --) shift; break ;;
+      *) break ;;
+    esac
+  done
+
+  local start=-1 expected=-1 number path base width=0
   local -a inputs=("$@")
-  ((${#inputs[@]} > 0)) || return 1
+  ((${#inputs[@]} > 0)) || { printf 'error: no split parts supplied\n' >&2; return 1; }
+
   for path in "${inputs[@]}"; do
     base=$(basename "$path")
     if [[ "$base" =~ \.part([0-9]+)(\.bin)?$ ]]; then
       number=$((10#${BASH_REMATCH[1]}))
+      ((width == 0)) && width=${#BASH_REMATCH[1]}
+      if ((${#BASH_REMATCH[1]} != width)); then
+        printf 'error: inconsistent split-part number width: %s\n' "$base" >&2
+        return 1
+      fi
     else
-      sandbox_kit_die "cannot parse split-part suffix: $base"
+      printf 'error: cannot parse split-part suffix: %s\n' "$base" >&2
+      return 1
     fi
     if ((start < 0)); then
       start=$number
       expected=$number
-      ((start == 0 || start == 1)) || sandbox_kit_die "split parts must start at part000 or part001: $base"
+      ((start == 0 || start == 1)) || { printf 'error: split parts must start at part000 or part001: %s\n' "$base" >&2; return 1; }
+      if [[ -n "$expected_start" ]] && ((start != expected_start)); then
+        printf 'error: split archive starts at part%0*d; expected part%0*d\n' "$width" "$start" "$width" "$expected_start" >&2
+        return 1
+      fi
     fi
-    ((number == expected)) || sandbox_kit_die "split archive gap: expected part$(printf '%03d' "$expected"), got $base"
-    ((expected+=1))
+    if ((number != expected)); then
+      printf 'error: split archive gap: expected part%0*d, got %s\n' "$width" "$expected" "$base" >&2
+      return 1
+    fi
+    expected=$((expected + 1))
   done
+
+  if [[ -n "$expected_count" ]] && ((${#inputs[@]} != expected_count)); then
+    printf 'error: split archive has %d part(s); expected %d\n' "${#inputs[@]}" "$expected_count" >&2
+    return 1
+  fi
 }
 
 # Populate a caller-owned array with either one complete archive or validated split parts.
-# Usage: sandbox_kit_collect_archive OUT_ARRAY 'complete*.zip' 'complete*.zip.part*'
+# Usage: sandbox_kit_collect_archive OUT complete_pattern parts_pattern [required] [expected_start] [expected_count]
 sandbox_kit_collect_archive() {
   local out_name=$1 complete_pattern=$2 parts_pattern=$3 required=${4:-required}
+  local expected_start=${5:-} expected_count=${6:-}
   local -n out=$out_name
-  local -a complete=() parts=()
+  local -a complete=() parts=() validate_args=()
   mapfile -t complete < <(sandbox_kit_find_matches "$complete_pattern")
   if ((${#complete[@]} > 1)); then
     printf 'ambiguous complete archive pattern %s:\n' "$complete_pattern" >&2
@@ -84,7 +114,9 @@ sandbox_kit_collect_archive() {
     [[ "$required" == optional ]] && { out=(); return 1; }
     sandbox_kit_die "archive not found: $complete_pattern or $parts_pattern"
   fi
-  sandbox_kit_validate_parts "${parts[@]}"
+  [[ -z "$expected_start" ]] || validate_args+=(--expected-start "$expected_start")
+  [[ -z "$expected_count" ]] || validate_args+=(--expected-count "$expected_count")
+  sandbox_kit_validate_parts "${validate_args[@]}" -- "${parts[@]}" || sandbox_kit_die "invalid split archive: $parts_pattern"
   out=("${parts[@]}")
 }
 

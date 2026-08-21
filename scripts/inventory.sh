@@ -7,10 +7,10 @@ MANIFEST="$ROOT/manifest/artifacts.tsv"
 STRICT=0
 [[ ${1:-} == --strict ]] && STRICT=1
 
-printf '%-20s %-38s %-10s %s\n' COMPONENT ASSET STATUS MATCH
-printf '%-20s %-38s %-10s %s\n' '--------------------' '--------------------------------------' '----------' '-----'
-missing=0
-while IFS=$'\t' read -r component logical requirement mode pattern drive_folder notes; do
+printf '%-20s %-38s %-12s %s\n' COMPONENT ASSET STATUS MATCH
+printf '%-20s %-38s %-12s %s\n' '--------------------' '--------------------------------------' '------------' '-----'
+problems=0
+while IFS=$'\t' read -r component logical requirement mode pattern drive_folder part_start part_count notes; do
   [[ -z "$component" || "$component" == \#* ]] && continue
   matches=()
   if [[ "$mode" == archive ]]; then
@@ -18,7 +18,10 @@ while IFS=$'\t' read -r component logical requirement mode pattern drive_folder 
     if ((${#matches[@]} == 0)); then
       mapfile -t matches < <(sandbox_kit_find_matches "$pattern.part*" | LC_ALL=C sort -V)
       if ((${#matches[@]} > 0)); then
-        if sandbox_kit_validate_parts "${matches[@]}"; then status="parts:${#matches[@]}"; else status=broken; fi
+        validate_args=()
+        [[ -z "$part_start" ]] || validate_args+=(--expected-start "$part_start")
+        [[ -z "$part_count" ]] || validate_args+=(--expected-count "$part_count")
+        if sandbox_kit_validate_parts "${validate_args[@]}" -- "${matches[@]}"; then status="parts:${#matches[@]}"; else status=broken; fi
       else
         status=missing
       fi
@@ -31,12 +34,15 @@ while IFS=$'\t' read -r component logical requirement mode pattern drive_folder 
     mapfile -t matches < <(sandbox_kit_find_matches "$pattern")
     case ${#matches[@]} in 0) status=missing ;; 1) status=ready ;; *) status=duplicate ;; esac
   fi
-  if [[ "$requirement" == required && "$status" != ready && "$status" != parts:* ]]; then ((missing+=1)); fi
+
+  if [[ "$status" == broken || "$status" == duplicate || ( "$requirement" == required && "$status" == missing ) ]]; then
+    problems=$((problems + 1))
+  fi
   match=${matches[0]:-"Drive/$drive_folder/$pattern"}
-  printf '%-20s %-38s %-10s %s\n' "$component" "$logical" "$status" "$match"
+  printf '%-20s %-38s %-12s %s\n' "$component" "$logical" "$status" "$match"
 done < "$MANIFEST"
 
-if ((STRICT && missing > 0)); then
-  printf '\n%d required asset(s) missing.\n' "$missing" >&2
+if ((STRICT && problems > 0)); then
+  printf '\n%d required/ambiguous asset issue(s) found.\n' "$problems" >&2
   exit 1
 fi
