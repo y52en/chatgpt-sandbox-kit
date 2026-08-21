@@ -49,6 +49,16 @@ The recommended flow is:
 
 The wheels are intentionally **not vendored or split into Git-tracked parts**. GitHub repository-file retrieval is useful for source code and small text files, while Google Drive is the more practical binary transport into the sandbox.
 
+## Android Emulator / ADB
+
+[`android-emulator/`](android-emulator/) prepares locally transferred Linux Android Platform Tools and Android Emulator archives completely offline.
+
+The current sandbox has been verified with Platform Tools 37.0.1 and Android Emulator 37.2.5. The helper scripts can reconstruct a split Emulator ZIP, validate SHA-256 and ZIP integrity, extract an SDK-like layout, smoke-test the ADB server, and verify the Emulator binary and its software-emulation option.
+
+The sandbox currently does **not** expose `/dev/kvm`, so hardware acceleration is unavailable. The tested Emulator supports `-accel off` / `-no-accel`; actual Android boot remains pending until a compatible system image is transferred into the sandbox.
+
+See [`android-emulator/README.ja.md`](android-emulator/README.ja.md) for the Japanese guide and exact hashes of the tested archives.
+
 ## License
 
-Original scripts and documentation in this repository are MIT-licensed. Ghidra, Unicorn Engine, Capstone, Keystone Engine, and other third-party software remain under their own licenses.
+Original scripts and documentation in this repository are MIT-licensed. Ghidra, Unicorn Engine, Capstone, Keystone Engine, Android SDK components, and other third-party software remain under their own licenses.
