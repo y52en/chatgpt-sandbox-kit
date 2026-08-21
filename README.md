@@ -2,7 +2,7 @@
 
 Small, offline-first helpers for tools that need to run inside ChatGPT's Linux sandbox.
 
-The sandbox can run normal Linux, Java, and Python tooling, but transferring files into it is often more restrictive than running the tools themselves. This repository keeps sandbox setup offline-first and can vendor selected third-party wheels as small Git-tracked parts.
+The sandbox can run normal Linux, Java, and Python tooling, but transferring files into it is often more restrictive than running the tools themselves. This repository therefore keeps third-party binaries out of Git and assumes they are transferred into the sandbox first, with Google Drive as the recommended transport for larger artifacts and Python wheels.
 
 ## Ghidra / PyGhidra
 
@@ -37,11 +37,17 @@ The `abi3` wheel works with CPython 3.7+ and the `manylinux_2_17_x86_64` build i
 
 ## Capstone / Keystone
 
-[`third_party/wheels/`](third_party/wheels/) vendors Linux x86_64 wheels for Capstone and Keystone Engine as parts of at most **1,000,000 bytes each**, keeping every binary part strictly below 1 MiB.
+[`capstone-keystone/`](capstone-keystone/) installs locally transferred Capstone and Keystone Engine wheels completely offline.
 
-`reassemble.sh` reconstructs the original wheels and verifies their SHA-256 values before offline installation. A weekly GitHub Actions workflow checks PyPI for newer stable CPython 3.13 / Linux x86_64-compatible wheels, verifies PyPI hashes, refreshes the split parts and license notices, smoke-tests both libraries, and commits only when an update is available.
+The recommended flow is:
 
-The sandbox itself does not need external package-index access to use the vendored wheels.
+1. put compatible Linux x86-64 `.whl` files in Google Drive;
+2. transfer/materialize them into the ChatGPT sandbox, normally under `/mnt/data`;
+3. optionally verify their SHA-256 values;
+4. install both into an isolated venv with `pip --no-index --no-deps`;
+5. verify them together by assembling x86 code with Keystone and disassembling the resulting bytes with Capstone.
+
+The wheels are intentionally **not vendored or split into Git-tracked parts**. GitHub repository-file retrieval is useful for source code and small text files, while Google Drive is the more practical binary transport into the sandbox.
 
 ## License
 
