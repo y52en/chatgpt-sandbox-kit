@@ -108,12 +108,14 @@ EMULATOR="$SDK_ROOT/emulator/emulator"
 [[ -f "$EMULATOR" ]] || die "emulator not found at expected path: $EMULATOR"
 chmod +x "$ADB" "$EMULATOR" 2>/dev/null || true
 
-if ldd "$ADB" | grep -q 'not found'; then
-  ldd "$ADB" >&2
+ADB_LDD=$(ldd "$ADB" 2>&1 || true)
+if grep -q 'not found' <<<"$ADB_LDD"; then
+  printf '%s\n' "$ADB_LDD" >&2
   die 'adb has missing shared-library dependencies'
 fi
-if ldd "$EMULATOR" | grep -q 'not found'; then
-  ldd "$EMULATOR" >&2
+EMU_LDD=$(ldd "$EMULATOR" 2>&1 || true)
+if grep -q 'not found' <<<"$EMU_LDD"; then
+  printf '%s\n' "$EMU_LDD" >&2
   die 'emulator has missing shared-library dependencies'
 fi
 
@@ -122,7 +124,7 @@ ADB_VERSION=$($ADB version)
 printf '%s\n' "$ADB_VERSION"
 log 'verifying emulator binary'
 EMU_VERSION=$($EMULATOR -version 2>&1)
-printf '%s\n' "$EMU_VERSION" | head -n 2
+printf '%s\n' "$EMU_VERSION" | sed -n '1,2p'
 
 log 'verifying adb server startup'
 $ADB start-server >/dev/null
