@@ -1,8 +1,18 @@
-# Local tool installations and transferred archives
+# Local tool installations, staging and transferred archives
 .tools/
+.cache/
+*-kit/
 *.zip
+*.tar.gz
+*.tar.xz
 *.part*
 *.whl
+*.deb
+*.jar
+
+# Generated environment / archives
+*.tmp
+*.reconstructed
 
 # Python
 .venv/
@@ -12,6 +22,13 @@ __pycache__/
 # Ghidra projects / generated output
 *.gpr
 *.rep/
+
+# Android / Unity generated state
+*.avd/
+.android/
+Library/
+Temp/
+Logs/
 
 # OS / editor noise
 .DS_Store

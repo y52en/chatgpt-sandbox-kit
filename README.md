@@ -1,98 +1,90 @@
 # chatgpt-sandbox-kit
 
-Small, offline-first helpers for tools that need to run inside ChatGPT's Linux sandbox.
+Offline-first development, debugging, reverse-engineering, browser, Android, and Unity tooling for ChatGPT's Linux sandbox.
 
-The sandbox can run normal Linux, Java, and Python tooling, but transferring files into it is often more restrictive than running the tools themselves. This repository therefore keeps third-party binaries out of Git and assumes they are transferred into the sandbox first, with Google Drive as the recommended transport for larger artifacts and Python wheels.
+The hard part of the sandbox is usually **getting large third-party binaries into it**, not executing them. This repository therefore keeps binaries out of Git and treats Google Drive (or conversation attachments) as the transport layer. Once artifacts are under `/mnt/data`, the repository discovers, reconstructs, verifies, and installs them without network access.
 
-## Ghidra / PyGhidra
+## One entrypoint
 
-[`ghidra/`](ghidra/) prepares a local Ghidra ZIP (or split ZIP parts) without network access:
-
-1. concatenate split parts when necessary;
-2. optionally verify the complete ZIP with SHA-256;
-3. test and extract the ZIP;
-4. check Ghidra's Java/Python requirements from `application.properties`;
-5. create a Python virtual environment;
-6. install PyGhidra and its dependencies exclusively from the wheels bundled with Ghidra;
-7. start Ghidra through PyGhidra to verify the installation.
-
-This is intentionally designed for the workflow where a large Ghidra ZIP is uploaded to Google Drive in chunks small enough for the ChatGPT Google Drive connector, fetched into `/mnt/data`, and reconstructed locally.
-
-## Unicorn Engine
-
-[`unicorn/`](unicorn/) installs a locally transferred Unicorn Python wheel with no package-index access:
-
-1. optionally verify the wheel with SHA-256;
-2. create an isolated Python virtual environment;
-3. install with `pip --no-index --no-deps`;
-4. run a real x86 emulation smoke test and verify the resulting register value.
-
-For the current ChatGPT Linux sandbox (`x86_64`, Python 3.13), the tested artifact is:
-
-```text
-unicorn-2.1.4-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+```bash
+./kit.sh inventory
+./kit.sh doctor
+./kit.sh install ghidra
+./kit.sh install android-emulator
+./kit.sh install java
 ```
 
-The `abi3` wheel works with CPython 3.7+ and the `manylinux_2_17_x86_64` build is compatible with the sandbox's x86-64 glibc environment.
+`kit.sh` recursively discovers the connected-Drive asset set by filename, validates split-part numbering, and delegates to the existing specialized installers. No Google Drive IDs or credentials are stored in the repository.
 
-## Capstone / Keystone
+To avoid accidental matches when `/mnt/data` contains unrelated files:
 
-[`capstone-keystone/`](capstone-keystone/) installs locally transferred Capstone and Keystone Engine wheels completely offline.
+```bash
+./kit.sh --asset-root /mnt/data/sandbox-assets inventory
+```
 
-The recommended flow is:
+See [`docs/google-drive-layout.md`](docs/google-drive-layout.md) for the Drive snapshot used by the current manifest and [`docs/tool-matrix.md`](docs/tool-matrix.md) for setup/verification coverage.
 
-1. put compatible Linux x86-64 `.whl` files in Google Drive;
-2. transfer/materialize them into the ChatGPT sandbox, normally under `/mnt/data`;
-3. optionally verify their SHA-256 values;
-4. install both into an isolated venv with `pip --no-index --no-deps`;
-5. verify them together by assembling x86 code with Keystone and disassembling the resulting bytes with Capstone.
+## Current offline tool set
 
-The wheels are intentionally **not vendored or split into Git-tracked parts**. GitHub repository-file retrieval is useful for source code and small text files, while Google Drive is the more practical binary transport into the sandbox.
+The Drive-backed manifest currently covers:
 
-## Chrome for Testing
+- Ghidra 12.1.3 + PyGhidra
+- Unicorn 2.1.4, Capstone 5.0.9, Keystone Engine 0.9.2
+- apktool 3.0.3 and JADX 1.5.5
+- Android command-line tools, Platform Tools, Android Emulator, API 30 Google APIs x86_64 system image
+- Chrome for Testing + ChromeDriver
+- Unity CLI + Unity Editor 2021.3.10f1
+- Temurin JDK 21, Gradle 9.7.1, Maven 3.9.16
+- Linux x64 .NET SDK
+- Python 3.13 Linux x86_64 wheelhouse
+- Playwright Linux browser bundle
+- Debian 13 amd64 development/debug/QEMU `.deb` bundle
 
-[`chrome/`](chrome/) prepares locally transferred Linux x64 Chrome for Testing and optional ChromeDriver ZIPs without downloading anything:
+Run `./kit.sh inventory --strict` after materializing the full Drive set to catch missing required assets.
 
-1. verify SHA-256 when expected hashes are supplied;
-2. test ZIP integrity;
-3. extract Chrome;
-4. run a real headless DOM smoke test against a local `data:` URL;
-5. optionally extract ChromeDriver and require its version to exactly match Chrome.
+## Design
 
-The current sandbox was verified with Chrome for Testing and ChromeDriver `152.0.7977.54`.
+### Offline by default
 
-## Android command-line tools
+Installers do not use package indexes or vendor download sites. Existing Ghidra, Unicorn, Capstone/Keystone, Chrome, Android, and Unity scripts retain their direct CLI, so automation written against earlier versions continues to work.
 
-[`android-tools/`](android-tools/) builds an SDK-style command-line tools tree from locally transferred Google archives.
+### Split archives are first-class
 
-The current sandbox was verified with command-line tools build `15859902` (`sdkmanager 22.0`) and Platform Tools 37.0.1. The setup places the archive at the SDK-required `cmdline-tools/latest` path, verifies `sdkmanager`, and optionally exposes `adb` / `fastboot` from Platform Tools.
+Large Drive objects may be transferred as `.part000`/`.part001`... or `.part001`... sequences. The shared discovery layer checks contiguity before passing parts to installers. Connector-added `.bin` suffixes are accepted.
 
-The newer `android` launcher in current command-line-tools packages performs a first-run network bootstrap of the standalone Android CLI, so the offline smoke test intentionally uses `sdkmanager` instead.
+### Rootless toolchains
 
-## Unity CLI / Editor
+Java, .NET, Debian `.deb` tooling, Python wheelhouses, Playwright browsers, and Android analysis tools are extracted into writable work directories and expose generated `env.sh` files. System package installation is not required.
 
-[`unity/`](unity/) prepares a locally transferred Unity CLI Debian package and optional Linux Editor archive without network access.
+### Fail on ambiguity
 
-It supports both a complete `Unity.tar.xz` and numerically ordered split parts such as `Unity.tar.xz.part001`; an extra `.bin` suffix added by connector materialization is accepted. The helper can verify a reconstructed archive without extraction or perform a full setup that extracts the Editor and runs a batch/headless version smoke test.
+If multiple files satisfy an artifact pattern, `kit.sh` stops instead of silently picking one. Set `SANDBOX_KIT_ASSET_ROOTS` or `--asset-root` to select the intended materialized set.
 
-The current sandbox was verified with Unity CLI `1.0.0-beta.3` and Unity Editor `2021.3.10f1`. Ten transferred Editor parts reconstructed to SHA-256 `a06c789a8da1fbc395de46e8720d34f87c2a15f313a0afc43f50c64c70453ea1`, and the extracted `Editor/Unity` returned `2021.3.10f1` from a batch/headless version check.
+## Commands
 
-## Android Emulator / ADB / APK CI
+```text
+./kit.sh inventory [--strict]   # Drive/materialized asset status
+./kit.sh doctor                 # host prerequisites and disk info
+./kit.sh list                   # installable components
+./kit.sh install COMPONENT      # discover + install one component
+./kit.sh install all            # install everything (large)
+./kit.sh env                    # show generated env.sh files
+./kit.sh self-test              # local discovery/syntax tests
+```
 
-[`android-emulator/`](android-emulator/) builds an offline Android test environment from locally transferred Linux Platform Tools, Android Emulator, and system-image archives.
+Each historical component directory remains usable directly (`ghidra/setup.sh`, `android-emulator/setup.sh`, and so on).
 
-The current sandbox has been verified end-to-end with Platform Tools 37.0.1, Android Emulator 37.2.5, and the Android 11 / API 30 / Google APIs / x86_64 system image. Despite `/dev/kvm` being unavailable, the AVD boots with QEMU TCG via `-accel off`; the measured first cold boot was about 8 minutes 9 seconds.
+## Local validation
 
-The helper scripts can:
+There is intentionally no download-based CI workflow. Run:
 
-1. reconstruct split Emulator and system-image ZIPs and verify SHA-256 / ZIP integrity;
-2. create an SDK-like tree and AVD without `sdkmanager` or `avdmanager`;
-3. launch a headless AVD and wait for stable Android framework readiness;
-4. install APKs while handling slow TCG dexopt/client teardown;
-5. launch an activity, save a screenshot and logcat, and fail on package-scoped crash/ANR markers.
+```bash
+./kit.sh self-test
+bash -n kit.sh lib/assets.sh scripts/*.sh */setup.sh
+```
 
-The tested API 30 image, APK installation path, and UI smoke test are documented in [`android-emulator/README.ja.md`](android-emulator/README.ja.md).
+Full smoke tests require the corresponding transferred third-party assets.
 
 ## License
 
-Original scripts and documentation in this repository are MIT-licensed. Ghidra, Unicorn Engine, Capstone, Keystone Engine, Android SDK components, Unity, Chrome, and other third-party software remain under their own licenses.
+Original scripts and documentation in this repository are MIT-licensed. Ghidra, Android SDK/Emulator components, Chrome, Unity, Temurin, Gradle, Maven, .NET, Playwright, apktool, JADX, Unicorn, Capstone, Keystone, Debian packages, and all other third-party software remain under their own licenses and terms.
