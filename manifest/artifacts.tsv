@@ -1,0 +1,25 @@
+# component	logical_name	requirement	mode	pattern	drive_folder	notes
+ghidra	Ghidra 12.1.3 archive	required	archive	ghidra_12.1.3_PUBLIC_20260817.zip	re	Split as part001..part003 in the current Drive snapshot
+unicorn	Unicorn wheel	required	file	unicorn-2.1.4-*.whl	re	CPython abi3 Linux x86_64 wheel
+capstone-keystone	Capstone wheel	required	file	capstone-5.0.9-*.whl	re	Linux x86_64 wheel
+capstone-keystone	Keystone wheel	required	file	keystone_engine-0.9.2-*.whl	re	manylinux1 x86_64 wheel
+chrome	Chrome for Testing	required	file	chrome-linux64.zip	Chrome	Linux x64 archive
+chrome	ChromeDriver	optional	file	chromedriver-linux64.zip	Chrome	Matching Linux x64 driver
+android-analysis	apktool	required	file	apktool_3.0.3.jar	Android	Offline APK decode/build jar
+android-analysis	jadx	required	file	jadx-1.5.5.zip	Android	Offline JADX distribution
+android-tools	Android command-line tools	required	file	commandlinetools-linux-15859902_latest.zip	Android	cmdline-tools build 15859902
+android-tools	Android command-line tools hash	optional	file	commandlinetools-linux-15859902_latest.zip.sha256	Android	Provider-side SHA-256 sidecar
+android-emulator	Platform Tools	required	file	platform-tools-latest-linux.zip	AndroidEmulator	ADB / fastboot
+android-emulator	Android Emulator	required	archive	emulator-linux_x64-16079175.zip	AndroidEmulator	Split as part001..part002
+android-emulator	API 30 Google APIs x86_64 system image	required	archive	x86_64-30_r16.zip	AndroidEmulator	Split as part001..part006
+unity	Unity CLI	required	file	unity-cli-linux-amd64.deb	UnityCLI	Linux amd64 package
+unity	Unity Editor 2021.3.10f1	required	archive	Unity-2021.3.10f1-linux.tar.xz	UnityEditor/2021.3.10f1	Split as part001..part010
+unity	Unity release metadata	optional	file	release-api.json	UnityEditor/2021.3.10f1	Release API snapshot
+java	Temurin JDK 21	required	file	temurin-jdk21-linux-x64.tar.gz	java	Rootless Java runtime/JDK
+java	Gradle 9.7.1	optional	file	gradle-9.7.1-bin.zip	java	Offline Gradle distribution
+java	Maven 3.9.16	optional	file	apache-maven-3.9.16-bin.tar.gz	java	Offline Maven distribution
+dotnet	.NET SDK	required	file	dotnet-sdk-linux-x64.tar.gz	dotnet	Linux x64 SDK bundle
+dotnet	.NET 10 release metadata	optional	file	dotnet-10.0-release-metadata.json	dotnet	Release metadata snapshot
+python	Python 3.13 wheelhouse	required	archive	python313-linux-x86_64-wheelhouse.tar.gz	python	Split as part000..part001
+playwright	Playwright browser bundle	required	archive	playwright-linux-browsers-bundle.tar.gz	playwright	Split as part000..part002
+linux-tools	Debian 13 dev/debug/QEMU deb bundle	required	archive	debian13-amd64-dev-debug-qemu-debs.tar.gz	linux-tools	Split as part000..part001
