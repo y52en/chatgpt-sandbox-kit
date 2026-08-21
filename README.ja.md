@@ -1,32 +1,28 @@
 # chatgpt-sandbox-kit
 
-ChatGPT の Linux sandbox へ大容量ツールを持ち込み、ネットワークに依存せずセットアップするための offline-first ツールキットです。
+ChatGPT の Linux sandbox へ大容量ツールを持ち込み、開発・デバッグ・リバースエンジニアリング・ブラウザ自動化・Android テスト・Unity 作業を offline-first で行うためのツールキットです。
 
-Git には第三者バイナリを入れません。Google Drive / 会話添付から `/mnt/data` に必要資材だけを持ち込み、`kit.sh` がファイルを自動検出して、分割アーカイブの欠落確認・再構築・既存 installer の呼び出しを行います。
+第三者バイナリは Git に含めません。Google Drive / 会話添付を搬送経路として使い、資材を `/mnt/data` に materialize した後は、外部から代替ファイルをダウンロードせずローカルで利用します。
+
+> **ChatGPT / coding agent でこのリポジトリを使う場合:** 最初に [`AGENTS.md`](AGENTS.md) を読ませてください。`AGENTS.md` にはツールの配置場所だけを記載し、セットアップ手順はすべて [`docs/setup/`](docs/setup/) に分離しています。
+
+## まず使うコマンド
 
 ```bash
-./kit.sh inventory
+./kit.sh inventory --strict
 ./kit.sh doctor
+./kit.sh list
 ./kit.sh install ghidra
-./kit.sh install android-emulator
 ```
 
-現在の Google Drive には、Ghidra / Unicorn / Capstone / Keystone、Android SDK/Emulator、apktool/JADX、Chrome、Unity、JDK/Gradle/Maven、.NET SDK、Python wheelhouse、Playwright browsers、Debian 13 開発・デバッグ・QEMU 用 `.deb` bundle が用意されています。
+`kit.sh` は materialize 済み資材を再帰的に探索し、重複・既知の分割アーカイブ欠落を確認して各ツール専用 installer を呼び出します。Google Drive の認証情報やファイル ID はリポジトリへ保存しません。
 
-詳細:
+セットアップ手順は [`docs/setup/README.md`](docs/setup/README.md)、現在の Drive 資材一覧は [`docs/google-drive-layout.md`](docs/google-drive-layout.md)、対応状況と検証内容は [`docs/tool-matrix.md`](docs/tool-matrix.md) を参照してください。
 
-- [Google Drive 資材レイアウト](docs/google-drive-layout.md)
-- [ツール/検証マトリクス](docs/tool-matrix.md)
-- [machine-readable manifest](manifest/artifacts.tsv)
+## 現在の対象
 
-## 既存スクリプトとの互換性
+Ghidra / PyGhidra、Unicorn / Capstone / Keystone、apktool / JADX、Android SDK / Emulator、Chrome / ChromeDriver、Unity、JDK / Gradle / Maven、.NET SDK、Python wheelhouse、Playwright browsers、Debian 13 開発・デバッグ・QEMU 用 `.deb` bundle を対象にしています。
 
-従来の `ghidra/setup.sh`、`unicorn/setup.sh`、`capstone-keystone/setup.sh`、`chrome/setup.sh`、`android-tools/setup.sh`、`android-emulator/*.sh`、`unity/setup.sh` はそのまま直接利用できます。`kit.sh` はその上位で Drive 資材の探索を担当します。
+大容量ファイルは完全アーカイブのほか、`part000` または `part001` 始まりの分割ファイルを扱えます。現在の manifest には既知資材の開始番号と part 数も保持しているため、末尾 part の欠落も再構築前に検出します。connector が `.bin` を追加したファイル名にも対応します。
 
-## 大容量分割ファイル
-
-`part000` 始まり・`part001` 始まりの両方に対応し、連番が飛んでいる場合は再結合前にエラーにします。Google Drive connector の materialize によって `.bin` が追加された分割ファイルも探索対象です。
-
-## CI について
-
-外部ダウンロードに依存する GitHub Actions は追加していません。軽量なローカル self-test のみを持ち、実バイナリの完全な smoke test は sandbox に資材を materialize した状態で行います。
+外部ダウンロードに依存する GitHub Actions は追加していません。軽量な self-test は `./kit.sh self-test` で実行し、実バイナリの完全な smoke test は資材を sandbox に materialize した状態で行います。
