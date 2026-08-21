@@ -49,6 +49,34 @@ The recommended flow is:
 
 The wheels are intentionally **not vendored or split into Git-tracked parts**. GitHub repository-file retrieval is useful for source code and small text files, while Google Drive is the more practical binary transport into the sandbox.
 
+## Chrome for Testing
+
+[`chrome/`](chrome/) prepares locally transferred Linux x64 Chrome for Testing and optional ChromeDriver ZIPs without downloading anything:
+
+1. verify SHA-256 when expected hashes are supplied;
+2. test ZIP integrity;
+3. extract Chrome;
+4. run a real headless DOM smoke test against a local `data:` URL;
+5. optionally extract ChromeDriver and require its version to exactly match Chrome.
+
+The current sandbox was verified with Chrome for Testing and ChromeDriver `152.0.7977.54`.
+
+## Android command-line tools
+
+[`android-tools/`](android-tools/) builds an SDK-style command-line tools tree from locally transferred Google archives.
+
+The current sandbox was verified with command-line tools build `15859902` (`sdkmanager 22.0`) and Platform Tools 37.0.1. The setup places the archive at the SDK-required `cmdline-tools/latest` path, verifies `sdkmanager`, and optionally exposes `adb` / `fastboot` from Platform Tools.
+
+The newer `android` launcher in current command-line-tools packages performs a first-run network bootstrap of the standalone Android CLI, so the offline smoke test intentionally uses `sdkmanager` instead.
+
+## Unity CLI / Editor
+
+[`unity/`](unity/) prepares a locally transferred Unity CLI Debian package and optional Linux Editor archive without network access.
+
+It supports both a complete `Unity.tar.xz` and numerically ordered split parts such as `Unity.tar.xz.part001`; an extra `.bin` suffix added by connector materialization is accepted. The helper can verify a reconstructed archive without extraction or perform a full setup that extracts the Editor and runs a batch/headless version smoke test.
+
+The current sandbox was verified with Unity CLI `1.0.0-beta.3` and Unity Editor `2021.3.10f1`. Ten transferred Editor parts reconstructed to SHA-256 `a06c789a8da1fbc395de46e8720d34f87c2a15f313a0afc43f50c64c70453ea1`, and the extracted `Editor/Unity` returned `2021.3.10f1` from a batch/headless version check.
+
 ## Android Emulator / ADB / APK CI
 
 [`android-emulator/`](android-emulator/) builds an offline Android test environment from locally transferred Linux Platform Tools, Android Emulator, and system-image archives.
@@ -67,4 +95,4 @@ The tested API 30 image, APK installation path, and UI smoke test are documented
 
 ## License
 
-Original scripts and documentation in this repository are MIT-licensed. Ghidra, Unicorn Engine, Capstone, Keystone Engine, Android SDK components, and other third-party software remain under their own licenses.
+Original scripts and documentation in this repository are MIT-licensed. Ghidra, Unicorn Engine, Capstone, Keystone Engine, Android SDK components, Unity, Chrome, and other third-party software remain under their own licenses.
