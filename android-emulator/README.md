@@ -1,28 +1,43 @@
 # Android Emulator (offline sandbox setup)
 
-This directory prepares locally transferred **Linux Android Platform Tools** and the **Linux Android Emulator** inside ChatGPT's Linux sandbox without downloading SDK components from the network.
+This directory provides an offline-first Android test environment for ChatGPT's Linux sandbox. Android SDK binaries are **not** vendored in Git and are never downloaded by these scripts. Transfer the official Linux archives through Google Drive or another available file channel, materialize them under `/mnt/data`, and install them locally.
 
-The setup is intended for the same transport model as the rest of this repository: put large official archives in Google Drive, materialize them under `/mnt/data`, then reconstruct and install locally.
+The complete tested path is now:
 
-## What is verified today
+```text
+Platform Tools + Android Emulator + Android 11 system image
+                           |
+                           v
+                    headless AVD
+                 (-accel off / TCG)
+                           |
+                           v
+                 adb install / am start
+                           |
+                           v
+                 screenshot + logcat
+```
 
-The following artifacts were tested directly in the current ChatGPT Linux sandbox:
+## Verified in the current ChatGPT sandbox
 
 | Component | Tested artifact | Result |
 | --- | --- | --- |
-| Platform Tools | `platform-tools-latest-linux.zip` | `adb` runs successfully |
-| Android Emulator | `emulator-linux_x64-16079175.zip` (also tested from split parts) | `emulator -version` runs successfully |
+| Platform Tools | `platform-tools-latest-linux.zip` | ADB server/client works |
+| Android Emulator | `emulator-linux_x64-16079175.zip` | Emulator 37.2.5 runs |
+| System image | `x86_64-30_r16.zip` | Android 11 / API 30 / Google APIs / x86_64 boots |
+| APK install | `BasicDreams.apk` pulled from the image | `adb install` commits an update under `/data/app` |
+| UI smoke test | Android Settings | Activity launch, 720x1280 screenshot and logcat collection work |
 
 Observed versions:
 
 ```text
 Android Debug Bridge version 1.0.41
-Version 37.0.1-15733141
-
-Android emulator version 37.2.5.0 (build_id 16079175)
+Platform Tools 37.0.1-15733141
+Android Emulator 37.2.5.0 (build_id 16079175)
+Android 11 / API 30 / x86_64
 ```
 
-Verified archive metadata for the exact files used in the test:
+Exact tested archive metadata:
 
 ```text
 platform-tools-latest-linux.zip
@@ -32,44 +47,38 @@ platform-tools-latest-linux.zip
 emulator-linux_x64-16079175.zip
   size:    351,290,892 bytes
   sha256:  b93886aeeaa264e4cd0cc9ad57428df8fccb33f17e71392428f5dd221877a97e
+
+x86_64-30_r16.zip
+  size:    1,438,186,618 bytes
+  sha256:  daae27654be74ae83a484daea4db2c0c77b4f4ad661a645bd5f36d96ce03e4d5
 ```
 
-The Emulator ZIP was also reconstructed successfully from:
+The system-image ZIP was reconstructed and CRC-tested from six 256 MB-or-smaller parts. Google Drive materialization may append `.bin` to later parts; all reconstruction scripts sort the supplied paths by version and do not depend on the final extension.
+
+## Important sandbox constraint: no KVM
+
+The current sandbox does not expose `/dev/kvm`, so the Emulator uses QEMU TCG with `-accel off`. This is functional but slow.
+
+The measured first cold boot of the tested API 30 AVD was:
 
 ```text
-emulator-linux_x64-16079175.zip.part001  256,000,000 bytes
-emulator-linux_x64-16079175.zip.part002   95,290,892 bytes
+Boot completed in 488685 ms
 ```
 
-The second part may arrive from the Drive connector with an extra `.bin` suffix; the setup script does not depend on the suffix and concatenates all Emulator inputs in version-sort order.
+That is about 8 minutes 9 seconds. During the first boot, Android may report `sys.boot_completed=1` before framework services have fully stabilized. `boot.sh` therefore requires two healthy snapshots five seconds apart, each checking:
 
-## Sandbox limitation: no KVM
+- `sys.boot_completed=1`
+- `dev.bootcomplete=1`
+- `init.svc.bootanim=stopped`
+- `package` service available
+- `activity` service available
+- `window` service available
 
-The current sandbox does not expose `/dev/kvm`:
+This avoids treating a transient `boot_completed` value as CI readiness.
 
-```text
-/dev/kvm is not found: VT disabled in BIOS or KVM kernel module not loaded
-```
+## 1. Install Platform Tools and Emulator
 
-The tested Emulator build still advertises both `-no-accel` and `-accel off`, so software CPU emulation is available in principle. Actual Android boot is **not yet claimed as verified** because a compatible Android system image/AVD is still required.
-
-Once a system image is available, the intended headless launch shape is:
-
-```bash
-emulator @<avd-name> \
-  -no-window \
-  -no-audio \
-  -no-boot-anim \
-  -gpu software \
-  -accel off \
-  -no-snapshot
-```
-
-Whether that is fast enough for practical CI must be measured after the system image is installed.
-
-## Setup
-
-For a complete Emulator ZIP:
+Complete Emulator ZIP:
 
 ```bash
 ./android-emulator/setup.sh \
@@ -79,7 +88,7 @@ For a complete Emulator ZIP:
   /mnt/data/emulator-linux_x64-16079175.zip
 ```
 
-For split Emulator parts:
+Split Emulator ZIP:
 
 ```bash
 ./android-emulator/setup.sh \
@@ -90,40 +99,109 @@ For split Emulator parts:
   /mnt/data/emulator-linux_x64-16079175.zip.part002.bin
 ```
 
-By default the SDK-like directory is created at:
+## 2. Install the system image and create an AVD
 
-```text
-/mnt/data/android-emulator-kit/sdk/
-├── emulator/
-└── platform-tools/
-```
-
-The setup script:
-
-1. reconstructs split Emulator parts when necessary;
-2. optionally verifies both SHA-256 hashes;
-3. performs ZIP CRC/integrity checks;
-4. extracts both components into one SDK root;
-5. checks for missing dynamic-library dependencies;
-6. runs `adb version` and `emulator -version`;
-7. starts/stops the ADB server as a smoke test;
-8. verifies that `-no-accel` / `-accel off` is supported;
-9. writes an `env.sh` exporting `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and `PATH`.
-
-Load the environment with:
+The script reads `source.properties` from the supplied ZIP, so the API level, tag and ABI are derived from the archive instead of being hard-coded. It creates the AVD directly and does not require `sdkmanager` or `avdmanager`.
 
 ```bash
-source /mnt/data/android-emulator-kit/env.sh
+./android-emulator/install-system-image.sh \
+  --sha256 daae27654be74ae83a484daea4db2c0c77b4f4ad661a645bd5f36d96ce03e4d5 \
+  --avd-name ci-api30 \
+  /mnt/data/x86_64-30_r16.zip.part001 \
+  /mnt/data/x86_64-30_r16.zip.part002.bin \
+  /mnt/data/x86_64-30_r16.zip.part003.bin \
+  /mnt/data/x86_64-30_r16.zip.part004.bin \
+  /mnt/data/x86_64-30_r16.zip.part005.bin \
+  /mnt/data/x86_64-30_r16.zip.part006.bin
 ```
 
-Then verify again at any time:
+The default workspace becomes:
+
+```text
+/mnt/data/android-emulator-kit/
+├── sdk/
+│   ├── emulator/
+│   ├── platform-tools/
+│   └── system-images/android-30/google_apis/x86_64/
+├── avd/
+│   └── ci-api30.avd/
+├── run/
+└── env.sh
+```
+
+## 3. Boot and wait for stable Android readiness
+
+```bash
+./android-emulator/boot.sh --avd-name ci-api30
+```
+
+Useful options:
+
+```text
+--timeout 1200   maximum readiness wait
+--wipe-data      reset userdata before boot
+--fresh          stop an emulator already using the selected port
+--port 5554      select the emulator/ADB port
+```
+
+When `/dev/kvm` is absent, `boot.sh` automatically adds `-accel off`. The tested headless launch also uses no window/audio/boot animation/snapshot and the SwiftShader GPU backend.
+
+## 4. Install an APK
+
+Supplying the package/application id is recommended in this TCG environment:
+
+```bash
+./android-emulator/install-apk.sh \
+  --package com.example.app \
+  /mnt/data/app.apk
+```
+
+`adb install` can keep its host-side client open while slow dexopt work continues. With `--package`, the helper starts installation asynchronously and polls PackageManager. For a new APK, a new `/data/app` path is sufficient confirmation; for an update, the path must change unless ADB itself returns `Success`.
+
+This behavior was tested by reinstalling `com.android.dreams.basic`; each successful update changed its `/data/app/.../base.apk` path even when the original `adb install` client was still waiting.
+
+## 5. APK/UI smoke test
+
+For an APK with a launcher activity:
+
+```bash
+./android-emulator/smoke-test.sh \
+  --package com.example.app \
+  /mnt/data/app.apk
+```
+
+For a known explicit activity:
+
+```bash
+./android-emulator/smoke-test.sh \
+  --package com.example.app \
+  --activity .MainActivity \
+  /mnt/data/app.apk
+```
+
+The smoke test:
+
+1. installs the APK unless `--skip-install` is used;
+2. resolves or uses the requested activity;
+3. starts it with ActivityManager;
+4. captures a PNG screenshot;
+5. saves a bounded logcat dump;
+6. fails on package-scoped Java FATAL exceptions, ANRs, or native crash markers.
+
+The current sandbox test successfully launched Android Settings and produced a valid 720x1280 PNG plus logcat with no package-scoped crash marker.
+
+## Verification and environment
+
+`setup.sh` verifies ZIP integrity, ELF dependencies, ADB startup, Emulator startup, and software-emulation support:
 
 ```bash
 ./android-emulator/verify.sh
 ```
 
-## Next step
+Load the generated environment manually if needed:
 
-A system image is deliberately not bundled or downloaded by these scripts. When a compatible Android system image is transferred into the sandbox, this directory can be extended with offline AVD creation plus an actual boot/ADB/UI-test smoke test.
+```bash
+source /mnt/data/android-emulator-kit/env.sh
+```
 
-Third-party Android SDK components remain under their respective upstream licenses; this repository does not vendor them.
+Third-party Android SDK components remain under their upstream licenses and are not committed to this repository.
