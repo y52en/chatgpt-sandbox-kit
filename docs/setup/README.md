@@ -7,7 +7,6 @@ All per-tool setup instructions live in this directory.
 | Ghidra / PyGhidra | [ghidra.md](ghidra.md) |
 | Unicorn | [unicorn.md](unicorn.md) |
 | Capstone + Keystone | [capstone-keystone.md](capstone-keystone.md) |
-| Chrome / ChromeDriver | [chrome.md](chrome.md) |
 | Android command-line tools | [android-tools.md](android-tools.md) |
 | Android Emulator / AVD | [android-emulator.md](android-emulator.md) |
 | apktool + JADX | [android-analysis.md](android-analysis.md) |
@@ -17,6 +16,8 @@ All per-tool setup instructions live in this directory.
 | Python wheelhouse | [python.md](python.md) |
 | Playwright browsers | [playwright.md](playwright.md) |
 | Debian dev/debug/QEMU bundle | [linux-tools.md](linux-tools.md) |
+
+The kit does not install Chrome for Testing or ChromeDriver. For ordinary browser automation, use a Chromium-family browser already provided by the sandbox host when available; `./kit.sh doctor` reports the detected browser. Use the Playwright browser bundle when a pinned browser payload is required.
 
 Before installing anything, the recommended sanity check is:
 
