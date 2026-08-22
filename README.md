@@ -33,13 +33,14 @@ The current Drive-backed manifest covers:
 - Unicorn 2.1.4, Capstone 5.0.9, and Keystone Engine 0.9.2
 - apktool 3.0.3 and JADX 1.5.5
 - Android command-line tools, Platform Tools, Android Emulator, and an API 30 Google APIs x86_64 image
-- Chrome for Testing + ChromeDriver
 - Unity CLI + Unity Editor 2021.3.10f1
 - Temurin JDK 21, Gradle 9.7.1, and Maven 3.9.16
 - Linux x64 .NET SDK
 - Python 3.13 Linux x86_64 offline wheelhouse
 - Playwright Linux browser bundle
 - Debian 13 amd64 development/debug/QEMU `.deb` bundle
+
+For ordinary browser automation, prefer a Chromium-family browser already supplied by the sandbox host when one is available. It is not a Drive asset and is not installed by `kit.sh`; `./kit.sh doctor` reports the detected host browser. Use the Drive-backed Playwright browser bundle when a pinned browser payload is required.
 
 ## How the kit is organized
 
@@ -51,7 +52,7 @@ The repository keeps three concerns separate:
 
 Large Drive objects may be supplied either as complete archives or as `.part000`/`.part001`... sequences. The current manifest also records the expected start number and part count for known split artifacts, so a missing final part is detected before reconstruction. Connector-added `.bin` suffixes are accepted.
 
-Java, .NET, Debian package bundles, Python wheelhouses, Playwright browsers, and Android analysis tools are installed rootlessly into writable workspaces under `/mnt/data`. Existing Ghidra, Android Emulator, Chrome, Unity, and other specialist scripts remain directly usable.
+Java, .NET, Debian package bundles, Python wheelhouses, Playwright browsers, and Android analysis tools are installed rootlessly into writable workspaces under `/mnt/data`. Existing Ghidra, Android Emulator, Unity, and other specialist scripts remain directly usable.
 
 ## Commands
 
@@ -78,4 +79,4 @@ Full smoke tests require the corresponding third-party artifacts to be present i
 
 ## License
 
-Original scripts and documentation in this repository are MIT-licensed. Ghidra, Android SDK/Emulator components, Chrome, Unity, Temurin, Gradle, Maven, .NET, Playwright, apktool, JADX, Unicorn, Capstone, Keystone, Debian packages, and all other third-party software remain under their own licenses and terms.
+Original scripts and documentation in this repository are MIT-licensed. Ghidra, Android SDK/Emulator components, Unity, Temurin, Gradle, Maven, .NET, Playwright, apktool, JADX, Unicorn, Capstone, Keystone, Debian packages, and all other third-party software remain under their own licenses and terms.
