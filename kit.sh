@@ -31,7 +31,7 @@ done
 if ((${#roots[@]})); then SANDBOX_KIT_ASSET_ROOTS=$(IFS=:; echo "${roots[*]}"); export SANDBOX_KIT_ASSET_ROOTS; fi
 command_name=${1:-}; [[ -n "$command_name" ]] || { usage; exit 2; }; shift || true
 
-components=(java dotnet python linux-tools playwright android-analysis android-tools unicorn capstone-keystone chrome ghidra unity android-emulator)
+components=(java dotnet python linux-tools playwright android-analysis android-tools unicorn capstone-keystone ghidra unity android-emulator)
 list_components(){ printf '%s\n' "${components[@]}"; }
 source_component_env(){ local component=$1 file; for file in "/mnt/data/$component-kit/env.sh" "$PWD/.tools/$component/env.sh" "$ROOT/.tools/$component/env.sh"; do if [[ -f "$file" ]]; then sandbox_kit_source_env_if_present "$file"; return 0; fi; done; return 0; }
 
@@ -68,8 +68,6 @@ install_component(){
       a=$(sandbox_kit_find_one 'unicorn-2.1.4-*.whl'); "$ROOT/unicorn/setup.sh" "$a" "$@";;
     capstone-keystone)
       a=$(sandbox_kit_find_one 'capstone-5.0.9-*.whl'); b=$(sandbox_kit_find_one 'keystone_engine-0.9.2-*.whl'); "$ROOT/capstone-keystone/setup.sh" "$a" "$b" "$@";;
-    chrome)
-      a=$(sandbox_kit_find_one 'chrome-linux64.zip'); b=$(sandbox_kit_find_one 'chromedriver-linux64.zip' optional || true); optional_args=(); [[ -z "$b" ]] || optional_args+=("$b"); "$ROOT/chrome/setup.sh" "$a" "${optional_args[@]}" "$@";;
     ghidra)
       sandbox_kit_collect_archive group 'ghidra_12.1.3_PUBLIC_20260817.zip' 'ghidra_12.1.3_PUBLIC_20260817.zip.part*' required 1 3; "$ROOT/ghidra/setup.sh" "${group[@]}" "$@";;
     unity)
