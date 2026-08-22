@@ -9,10 +9,10 @@ Setup instructions are centralized in [`setup/`](setup/).
 | Python | Python 3.13 wheelhouse | tar integrity, wheel discovery, venv/pip probe |
 | Linux dev/debug/QEMU | Debian 13 `.deb` bundle | `dpkg-deb -x`; discovered binaries are listed |
 | Playwright browsers | browser bundle | archive integrity + browser revision directory discovery |
+| Host browser | sandbox-provided Chromium-family browser; not a Drive asset | `./kit.sh doctor` command discovery + browser version probe |
 | apktool/JADX | jar + ZIP | `apktool --version`, `jadx --version` |
 | Android SDK CLI | command-line tools + Platform Tools | existing `sdkmanager`/adb smoke tests |
 | Android Emulator | Platform Tools + Emulator + API 30 image | existing emulator, ADB, ZIP, image/AVD checks |
-| Chrome | Chrome for Testing + ChromeDriver | existing headless DOM and exact driver-version checks |
 | Unicorn | wheel | existing x86 emulation test |
 | Capstone/Keystone | wheels | existing assemble/disassemble round trip |
 | Ghidra/PyGhidra | Ghidra split ZIP | existing ZIP, Java/Python requirements and JVM startup |

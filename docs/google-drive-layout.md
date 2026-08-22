@@ -9,7 +9,6 @@ Snapshot inspected on **2026-08-22**:
 | `re/` | Ghidra 12.1.3 split ZIP (`part001`-`part003`), Unicorn 2.1.4 wheel, Capstone 5.0.9 wheel, Keystone Engine 0.9.2 wheel |
 | `Android/` | Android command-line tools build 15859902 + SHA-256 sidecar, apktool 3.0.3, JADX 1.5.5 |
 | `AndroidEmulator/` | Platform Tools, Emulator build 16079175 split ZIP (`part001`-`part002`), API 30 Google APIs x86_64 image r16 split ZIP (`part001`-`part006`) |
-| `Chrome/` | `chrome-linux64.zip`, `chromedriver-linux64.zip` |
 | `UnityCLI/` | `unity-cli-linux-amd64.deb` |
 | `UnityEditor/2021.3.10f1/` | Unity Editor archive split into `part001`-`part010`, plus `release-api.json` |
 | `java/` | Temurin JDK 21, Gradle 9.7.1, Maven 3.9.16 |
@@ -17,6 +16,8 @@ Snapshot inspected on **2026-08-22**:
 | `python/` | Python 3.13 Linux x86_64 wheelhouse split into `part000`-`part001` |
 | `playwright/` | Linux browser bundle split into `part000`-`part002` |
 | `linux-tools/` | Debian 13 amd64 development/debug/QEMU `.deb` bundle split into `part000`-`part001` |
+
+Chrome for Testing and ChromeDriver are intentionally not part of the Drive snapshot. For ordinary browser automation, prefer a Chromium-family browser already supplied by the sandbox host; `./kit.sh doctor` reports one when available. The Drive-backed Playwright browser bundle remains available when a pinned browser payload is needed.
 
 The machine-readable version is [`manifest/artifacts.tsv`](../manifest/artifacts.tsv).
 
