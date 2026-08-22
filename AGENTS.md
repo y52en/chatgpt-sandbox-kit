@@ -5,7 +5,6 @@
 | Ghidra / PyGhidra | `ghidra/` | `/mnt/data/ghidra-kit` |
 | Unicorn Engine | `unicorn/` | `/mnt/data/unicorn-kit` |
 | Capstone + Keystone | `capstone-keystone/` | `/mnt/data/capstone-keystone-kit` |
-| Chrome + ChromeDriver | `chrome/` | `/mnt/data/chrome-kit` |
 | Android command-line tools | `android-tools/` | `/mnt/data/android-tools-kit` |
 | Android Emulator / AVD | `android-emulator/` | `/mnt/data/android-emulator-kit` |
 | apktool + JADX | `android-analysis/` | `/mnt/data/android-analysis-kit` |
