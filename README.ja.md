@@ -21,7 +21,9 @@ ChatGPT の Linux sandbox へ大容量ツールを持ち込み、開発・デバ
 
 ## 現在の対象
 
-Ghidra / PyGhidra、Unicorn / Capstone / Keystone、apktool / JADX、Android SDK / Emulator、Chrome / ChromeDriver、Unity、JDK / Gradle / Maven、.NET SDK、Python wheelhouse、Playwright browsers、Debian 13 開発・デバッグ・QEMU 用 `.deb` bundle を対象にしています。
+Ghidra / PyGhidra、Unicorn / Capstone / Keystone、apktool / JADX、Android SDK / Emulator、Unity、JDK / Gradle / Maven、.NET SDK、Python wheelhouse、Playwright browsers、Debian 13 開発・デバッグ・QEMU 用 `.deb` bundle を対象にしています。
+
+通常のブラウザ自動化では、sandbox ホスト側に用意されている Chromium 系ブラウザが利用可能ならそれを優先します。これは Google Drive 資材でも `kit.sh` の install 対象でもありません。`./kit.sh doctor` でホストブラウザの検出結果を確認できます。特定のブラウザ payload を固定したい場合は Drive-backed の Playwright browser bundle を使用します。
 
 大容量ファイルは完全アーカイブのほか、`part000` または `part001` 始まりの分割ファイルを扱えます。現在の manifest には既知資材の開始番号と part 数も保持しているため、末尾 part の欠落も再構築前に検出します。connector が `.bin` を追加したファイル名にも対応します。
 
