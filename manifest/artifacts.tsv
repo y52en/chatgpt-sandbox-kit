@@ -21,3 +21,8 @@ dotnet	.NET 10 release metadata	optional	file	dotnet-10.0-release-metadata.json	
 python	Python 3.13 wheelhouse	required	archive	python313-linux-x86_64-wheelhouse.tar.gz	python	0	2	Split as part000..part001
 playwright	Playwright browser bundle	required	archive	playwright-linux-browsers-bundle.tar.gz	playwright	0	3	Split as part000..part002
 linux-tools	Debian 13 dev/debug/QEMU deb bundle	required	archive	debian13-amd64-dev-debug-qemu-debs.tar.gz	linux-tools	0	2	Split as part000..part001
+video	Remotion offline project	required	file	remotion-offline-linux-x64.zip	Video			Remotion 4.0.515 project and npm cache
+video	Chrome Headless Shell	required	file	chrome-headless-shell-linux64-149.0.7790.0.zip	Video			Pinned browser used by Remotion; avoids managed host Chromium policies
+video	VOICEVOX split metadata	required	file	parts.json	Video/voicevox			Metadata and hashes for part-0001..part-0008; setup narrows to the voicevox .parts directory
+video	7-Zip Linux helper	required	file	7z2602-linux-x64.tar.xz	Video/tools			Used to extract the VOICEVOX 7z archive
+video	psd-tools wheel	optional	file	psd_tools-1.18.0-*.whl	Video/psd/wheels			Optional layered PSD extraction support; sibling wheels are used as the offline wheelhouse

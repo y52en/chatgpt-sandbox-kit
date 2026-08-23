@@ -13,4 +13,5 @@
 | .NET SDK | `dotnet/` | `/mnt/data/dotnet-kit` |
 | Python offline wheelhouse | `python/` | `/mnt/data/python-kit` |
 | Playwright browser bundle | `playwright/` | `/mnt/data/playwright-kit` |
+| Remotion / Chrome Headless Shell / VOICEVOX / PSD | `video/` | `/mnt/data/video-kit` |
 | Debian development/debug/QEMU tools | `linux-tools/` | `/mnt/data/linux-tools-kit` |

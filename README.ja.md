@@ -1,6 +1,6 @@
 # chatgpt-sandbox-kit
 
-ChatGPT の Linux sandbox へ大容量ツールを持ち込み、開発・デバッグ・リバースエンジニアリング・ブラウザ自動化・Android テスト・Unity 作業を offline-first で行うためのツールキットです。
+ChatGPT の Linux sandbox へ大容量ツールを持ち込み、開発・デバッグ・リバースエンジニアリング・ブラウザ自動化・Android テスト・Unity 作業・コードベースの動画生成を offline-first で行うためのツールキットです。
 
 第三者バイナリは Git に含めません。Google Drive / 会話添付を搬送経路として使い、資材を `/mnt/data` に materialize した後は、外部から代替ファイルをダウンロードせずローカルで利用します。
 
@@ -21,10 +21,12 @@ ChatGPT の Linux sandbox へ大容量ツールを持ち込み、開発・デバ
 
 ## 現在の対象
 
-Ghidra / PyGhidra、Unicorn / Capstone / Keystone、apktool / JADX、Android SDK / Emulator、Unity、JDK / Gradle / Maven、.NET SDK、Python wheelhouse、Playwright browsers、Debian 13 開発・デバッグ・QEMU 用 `.deb` bundle を対象にしています。
+Ghidra / PyGhidra、Unicorn / Capstone / Keystone、apktool / JADX、Android SDK / Emulator、Unity、JDK / Gradle / Maven、.NET SDK、Python wheelhouse、Playwright browsers、Remotion / Chrome Headless Shell / VOICEVOX / psd-tools、Debian 13 開発・デバッグ・QEMU 用 `.deb` bundle を対象にしています。
 
 通常のブラウザ自動化では、sandbox ホスト側に用意されている Chromium 系ブラウザが利用可能ならそれを優先します。これは Google Drive 資材でも `kit.sh` の install 対象でもありません。`./kit.sh doctor` でホストブラウザの検出結果を確認できます。特定のブラウザ payload を固定したい場合は Drive-backed の Playwright browser bundle を使用します。
 
-大容量ファイルは完全アーカイブのほか、`part000` または `part001` 始まりの分割ファイルを扱えます。現在の manifest には既知資材の開始番号と part 数も保持しているため、末尾 part の欠落も再構築前に検出します。connector が `.bin` を追加したファイル名にも対応します。
+Remotion だけは例外です。実際の sandbox でホスト Chromium に管理ポリシーの `URLBlocklist` が設定され、Remotion が使う localhost bundle が拒否されたため、`video` component は Drive-backed の Chrome Headless Shell 149.0.7790.0 を専用ブラウザとして使用します。Remotion 4.0.515、VOICEVOX Engine 0.25.2、psd-tools 1.18.0 と組み合わせて、PSD 立ち絵・VOICEVOX 音声・字幕を含む約5分の動画を実際にレンダリングして動作確認済みです。
+
+大容量ファイルは完全アーカイブのほか、`part000` または `part001` 始まりの分割ファイルを扱えます。現在の manifest には既知資材の開始番号と part 数も保持しているため、末尾 part の欠落も再構築前に検出します。connector が `.bin` を追加したファイル名にも対応します。動画用 VOICEVOX payload は `parts.json + part-0001...` 形式で、各 part と再構成後アーカイブの SHA-256 を検証してから展開します。
 
 外部ダウンロードに依存する GitHub Actions は追加していません。軽量な self-test は `./kit.sh self-test` で実行し、実バイナリの完全な smoke test は資材を sandbox に materialize した状態で行います。

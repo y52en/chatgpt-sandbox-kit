@@ -1,6 +1,6 @@
 # chatgpt-sandbox-kit
 
-`chatgpt-sandbox-kit` is an offline-first toolbox for development, debugging, reverse engineering, browser automation, Android testing, and Unity work inside ChatGPT's Linux sandbox.
+`chatgpt-sandbox-kit` is an offline-first toolbox for development, debugging, reverse engineering, browser automation, Android testing, Unity work, and code-driven video production inside ChatGPT's Linux sandbox.
 
 The main practical constraint is usually transferring large third-party binaries into the sandbox, not running them. This repository therefore keeps those binaries out of Git and treats Google Drive (or conversation attachments) as the transport layer. After the files are materialized under `/mnt/data`, the kit discovers and uses them locally without downloading replacements.
 
@@ -38,9 +38,10 @@ The current Drive-backed manifest covers:
 - Linux x64 .NET SDK
 - Python 3.13 Linux x86_64 offline wheelhouse
 - Playwright Linux browser bundle
+- Remotion 4.0.515 + Chrome Headless Shell 149.0.7790.0 + VOICEVOX Engine 0.25.2 + optional psd-tools 1.18.0 wheelhouse
 - Debian 13 amd64 development/debug/QEMU `.deb` bundle
 
-For ordinary browser automation, prefer a Chromium-family browser already supplied by the sandbox host when one is available. It is not a Drive asset and is not installed by `kit.sh`; `./kit.sh doctor` reports the detected host browser. Use the Drive-backed Playwright browser bundle when a pinned browser payload is required.
+For ordinary browser automation, prefer a Chromium-family browser already supplied by the sandbox host when one is available. It is not a Drive asset and is not installed by `kit.sh`; `./kit.sh doctor` reports the detected host browser. Use the Drive-backed Playwright browser bundle when a pinned browser payload is required. Remotion is a deliberate exception: the tested host Chromium is managed by a URL block policy that rejects Remotion's localhost bundle, so the `video` component uses its own pinned Chrome Headless Shell.
 
 ## How the kit is organized
 
@@ -50,9 +51,9 @@ The repository keeps three concerns separate:
 - each tool directory contains the executable installer/runtime helpers.
 - `docs/setup/` contains setup instructions for humans; tool-directory README files only point there.
 
-Large Drive objects may be supplied either as complete archives or as `.part000`/`.part001`... sequences. The current manifest also records the expected start number and part count for known split artifacts, so a missing final part is detected before reconstruction. Connector-added `.bin` suffixes are accepted.
+Large Drive objects may be supplied either as complete archives or as `.part000`/`.part001`... sequences. The current manifest also records the expected start number and part count for known split artifacts, so a missing final part is detected before reconstruction. Connector-added `.bin` suffixes are accepted. The video component additionally validates the VOICEVOX `parts.json` format used by its `part-0001`... payload before extraction.
 
-Java, .NET, Debian package bundles, Python wheelhouses, Playwright browsers, and Android analysis tools are installed rootlessly into writable workspaces under `/mnt/data`. Existing Ghidra, Android Emulator, Unity, and other specialist scripts remain directly usable.
+Java, .NET, Debian package bundles, Python wheelhouses, Playwright browsers, video tools, and Android analysis tools are installed rootlessly into writable workspaces under `/mnt/data`. Existing Ghidra, Android Emulator, Unity, and other specialist scripts remain directly usable.
 
 ## Commands
 
@@ -79,4 +80,4 @@ Full smoke tests require the corresponding third-party artifacts to be present i
 
 ## License
 
-Original scripts and documentation in this repository are MIT-licensed. Ghidra, Android SDK/Emulator components, Unity, Temurin, Gradle, Maven, .NET, Playwright, apktool, JADX, Unicorn, Capstone, Keystone, Debian packages, and all other third-party software remain under their own licenses and terms.
+Original scripts and documentation in this repository are MIT-licensed. Ghidra, Android SDK/Emulator components, Unity, Temurin, Gradle, Maven, .NET, Playwright, Remotion, Chrome for Testing / Chrome Headless Shell, VOICEVOX, psd-tools, apktool, JADX, Unicorn, Capstone, Keystone, Debian packages, and all other third-party software remain under their own licenses and terms.
