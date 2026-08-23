@@ -26,7 +26,7 @@ The default workspace is `/mnt/data/video-kit`. `setup.sh` verifies every VOICEV
 ## Smoke test
 
 ```bash
-video/smoke-test.sh
+bash video/smoke-test.sh
 ```
 
 This first opens a localhost HTTP page with the dedicated Headless Shell—the exact scenario blocked by the managed host Chromium—and then asks Remotion to enumerate compositions. Both checks must succeed.
@@ -34,8 +34,8 @@ This first opens a localhost HTTP page with the dedicated Headless Shell—the e
 ## Remotion
 
 ```bash
-video/run-remotion.sh compositions
-video/run-remotion.sh render Demo /mnt/data/out.mp4
+bash video/run-remotion.sh compositions
+bash video/run-remotion.sh render Demo /mnt/data/out.mp4
 ```
 
 The wrapper forces `--browser-executable=<dedicated headless shell>` and `--chrome-mode=headless-shell`, overriding a project config that points at the host Chromium.
@@ -43,7 +43,7 @@ The wrapper forces `--browser-executable=<dedicated headless shell>` and `--chro
 ## VOICEVOX
 
 ```bash
-video/start-voicevox.sh
+bash video/start-voicevox.sh
 # API: http://127.0.0.1:50021
 ```
 
