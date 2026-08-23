@@ -23,6 +23,14 @@ Do not use the sandbox host `/usr/bin/chromium` for Remotion. The tested host br
 
 The default workspace is `/mnt/data/video-kit`. `setup.sh` verifies every VOICEVOX split part against `parts.json`, verifies the reconstructed archive SHA-256, normalizes Windows-style path separators in the Remotion ZIP, performs `npm ci --offline`, installs Chrome Headless Shell, extracts VOICEVOX, and optionally creates a psd-tools venv.
 
+## Smoke test
+
+```bash
+video/smoke-test.sh
+```
+
+This first opens a localhost HTTP page with the dedicated Headless Shell—the exact scenario blocked by the managed host Chromium—and then asks Remotion to enumerate compositions. Both checks must succeed.
+
 ## Remotion
 
 ```bash
@@ -51,4 +59,4 @@ The helper exports leaf layers as transparent PNGs and writes `layers.json` with
 
 ## Verified end-to-end
 
-The stack was used to render a 5-minute 1280x720 H.264/AAC video with a layered PSD character, VOICEVOX narration, subtitles, and Remotion. Chrome Headless Shell 149.0.7790.0, Remotion 4.0.515, VOICEVOX Engine 0.25.2, and psd-tools 1.18.0 were all exercised in the sandbox.
+The stack was used to render a 5-minute 1280x720 H.264/AAC video with a layered PSD character, VOICEVOX narration, subtitles, and Remotion. Chrome Headless Shell 149.0.7790.0, Remotion 4.0.515, VOICEVOX Engine 0.25.2, and psd-tools 1.18.0 were all exercised in the sandbox. The repository-side `setup.sh` and `smoke-test.sh` were then re-run against the same Drive-format assets: VOICEVOX part hashes and reconstructed hash matched, offline `npm ci` succeeded, localhost loaded in Headless Shell, and `remotion compositions` succeeded.
