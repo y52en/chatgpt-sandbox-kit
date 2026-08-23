@@ -31,9 +31,19 @@ done
 if ((${#roots[@]})); then SANDBOX_KIT_ASSET_ROOTS=$(IFS=:; echo "${roots[*]}"); export SANDBOX_KIT_ASSET_ROOTS; fi
 command_name=${1:-}; [[ -n "$command_name" ]] || { usage; exit 2; }; shift || true
 
-components=(java dotnet python linux-tools playwright android-analysis android-tools unicorn capstone-keystone ghidra unity android-emulator)
+components=(java dotnet python linux-tools playwright video android-analysis android-tools unicorn capstone-keystone ghidra unity android-emulator)
 list_components(){ printf '%s\n' "${components[@]}"; }
 source_component_env(){ local component=$1 file; for file in "/mnt/data/$component-kit/env.sh" "$PWD/.tools/$component/env.sh" "$ROOT/.tools/$component/env.sh"; do if [[ -f "$file" ]]; then sandbox_kit_source_env_if_present "$file"; return 0; fi; done; return 0; }
+find_voicevox_parts_meta(){
+  local root
+  local -a matches=()
+  while IFS= read -r root; do
+    while IFS= read -r path; do matches+=("$path"); done < <(find "$root" -type d \( -name '.git' -o -name '.tools' -o -name '*-kit' \) -prune -o -type f -name parts.json -path '*/voicevox_engine-linux-cpu-x64-*.7z.001.parts/parts.json' -print 2>/dev/null)
+  done < <(sandbox_kit_asset_roots)
+  mapfile -t matches < <(printf '%s\n' "${matches[@]}" | sed '/^$/d' | LC_ALL=C sort -u)
+  ((${#matches[@]} == 1)) || { printf 'VOICEVOX parts metadata matches: %d\n' "${#matches[@]}" >&2; printf '  %s\n' "${matches[@]}" >&2; sandbox_kit_die 'expected exactly one VOICEVOX parts.json; remove duplicates or narrow SANDBOX_KIT_ASSET_ROOTS'; }
+  printf '%s\n' "${matches[0]}"
+}
 
 install_component(){
   local component=$1; shift || true
@@ -52,6 +62,11 @@ install_component(){
       sandbox_kit_collect_archive group 'debian13-amd64-dev-debug-qemu-debs.tar.gz' 'debian13-amd64-dev-debug-qemu-debs.tar.gz.part*' required 0 2; "$ROOT/linux-tools/setup.sh" "${group[@]}" "$@"; source_component_env linux-tools;;
     playwright)
       sandbox_kit_collect_archive group 'playwright-linux-browsers-bundle.tar.gz' 'playwright-linux-browsers-bundle.tar.gz.part*' required 0 3; "$ROOT/playwright/setup.sh" "${group[@]}" "$@"; source_component_env playwright;;
+    video)
+      a=$(sandbox_kit_find_one 'remotion-offline-linux-x64.zip'); b=$(sandbox_kit_find_one 'chrome-headless-shell-linux64-149.0.7790.0.zip'); c=$(sandbox_kit_find_one '7z2602-linux-x64.tar.xz'); hash_file=$(find_voicevox_parts_meta)
+      expected_hash=$(sandbox_kit_find_one 'psd_tools-1.18.0-*.whl' optional || true)
+      optional_args=(); [[ -z "$expected_hash" ]] || optional_args+=("$expected_hash")
+      "$ROOT/video/setup.sh" "$a" "$b" "$hash_file" "$c" "${optional_args[@]}" "$@"; source_component_env video;;
     android-analysis)
       a=$(sandbox_kit_find_one 'apktool_3.0.3.jar'); b=$(sandbox_kit_find_one 'jadx-1.5.5.zip'); "$ROOT/android-analysis/setup.sh" "$a" "$b" "$@"; source_component_env android-analysis;;
     android-tools)
