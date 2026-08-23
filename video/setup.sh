@@ -62,9 +62,13 @@ VOICEVOX_BIN=$(find "$WORK_DIR/voicevox" -type f \( -name run -o -name voicevox_
 
 PSD_PYTHON=
 if [[ -n "$PSD_WHEEL" ]]; then
-  WHEEL_DIR=$(dirname "$PSD_WHEEL"); python3 -m venv "$WORK_DIR/psd-venv"
-  "$WORK_DIR/psd-venv/bin/pip" install --no-index --find-links "$WHEEL_DIR" 'psd-tools[composite]==1.18.0'
-  PSD_PYTHON="$WORK_DIR/psd-venv/bin/python"
+  WHEEL_DIR=$(dirname "$PSD_WHEEL")
+  if python3 -m venv "$WORK_DIR/psd-venv" && "$WORK_DIR/psd-venv/bin/pip" install --no-index --find-links "$WHEEL_DIR" 'psd-tools[composite]==1.18.0'; then
+    PSD_PYTHON="$WORK_DIR/psd-venv/bin/python"
+  else
+    echo "warning: psd-tools wheelhouse is incomplete; PSD support was skipped" >&2
+    rm -rf "$WORK_DIR/psd-venv"
+  fi
 fi
 cat > "$WORK_DIR/env.sh" <<ENV
 export VIDEO_KIT_WORK_DIR=$(printf '%q' "$WORK_DIR")
