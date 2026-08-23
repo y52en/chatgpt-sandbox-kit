@@ -66,7 +66,7 @@ install_component(){
       a=$(sandbox_kit_find_one 'remotion-offline-linux-x64.zip'); b=$(sandbox_kit_find_one 'chrome-headless-shell-linux64-149.0.7790.0.zip'); c=$(sandbox_kit_find_one '7z2602-linux-x64.tar.xz'); hash_file=$(find_voicevox_parts_meta)
       expected_hash=$(sandbox_kit_find_one 'psd_tools-1.18.0-*.whl' optional || true)
       optional_args=(); [[ -z "$expected_hash" ]] || optional_args+=("$expected_hash")
-      "$ROOT/video/setup.sh" "$a" "$b" "$hash_file" "$c" "${optional_args[@]}" "$@"; source_component_env video;;
+      bash "$ROOT/video/setup.sh" "$a" "$b" "$hash_file" "$c" "${optional_args[@]}" "$@"; source_component_env video;;
     android-analysis)
       a=$(sandbox_kit_find_one 'apktool_3.0.3.jar'); b=$(sandbox_kit_find_one 'jadx-1.5.5.zip'); "$ROOT/android-analysis/setup.sh" "$a" "$b" "$@"; source_component_env android-analysis;;
     android-tools)
