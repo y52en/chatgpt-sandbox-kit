@@ -12,5 +12,5 @@ python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$TMP" >/dev/null 2>
 out=$("$REMOTION_BROWSER_EXECUTABLE" --no-sandbox --disable-gpu --dump-dom "http://127.0.0.1:$PORT/index.html" 2>/dev/null || true)
 grep -q VIDEO_KIT_LOCALHOST_OK <<<"$out" || { echo 'dedicated browser could not load localhost' >&2; exit 1; }
 echo '[video-smoke] localhost browser test: OK'
-"$ROOT/run-remotion.sh" compositions
+bash "$ROOT/run-remotion.sh" compositions
 echo '[video-smoke] Remotion compositions: OK'
