@@ -35,10 +35,20 @@ components=(java dotnet python linux-tools playwright video android-analysis and
 list_components(){ printf '%s\n' "${components[@]}"; }
 source_component_env(){ local component=$1 file; for file in "/mnt/data/$component-kit/env.sh" "$PWD/.tools/$component/env.sh" "$ROOT/.tools/$component/env.sh"; do if [[ -f "$file" ]]; then sandbox_kit_source_env_if_present "$file"; return 0; fi; done; return 0; }
 find_voicevox_parts_meta(){
-  local root
+  local root path
   local -a matches=()
   while IFS= read -r root; do
-    while IFS= read -r path; do matches+=("$path"); done < <(find "$root" -type d \( -name '.git' -o -name '.tools' -o -name '*-kit' \) -prune -o -type f -name parts.json -path '*/voicevox_engine-linux-cpu-x64-*.7z.001.parts/parts.json' -print 2>/dev/null)
+    while IFS= read -r path; do
+      if python3 - "$path" <<'PY' >/dev/null 2>&1
+import fnmatch, json, pathlib, sys
+p=pathlib.Path(sys.argv[1])
+try: meta=json.loads(p.read_text(encoding='utf-8'))
+except Exception: raise SystemExit(1)
+name=str(meta.get('original_name',''))
+raise SystemExit(0 if fnmatch.fnmatch(name, 'voicevox_engine-linux-cpu-x64-*.7z.001') else 1)
+PY
+      then matches+=("$path"); fi
+    done < <(find "$root" -type d \( -name '.git' -o -name '.tools' -o -name '*-kit' \) -prune -o -type f -name parts.json -print 2>/dev/null)
   done < <(sandbox_kit_asset_roots)
   mapfile -t matches < <(printf '%s\n' "${matches[@]}" | sed '/^$/d' | LC_ALL=C sort -u)
   ((${#matches[@]} == 1)) || { printf 'VOICEVOX parts metadata matches: %d\n' "${#matches[@]}" >&2; printf '  %s\n' "${matches[@]}" >&2; sandbox_kit_die 'expected exactly one VOICEVOX parts.json; remove duplicates or narrow SANDBOX_KIT_ASSET_ROOTS'; }
