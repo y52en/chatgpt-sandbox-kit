@@ -46,9 +46,12 @@ with out_path.open('wb') as out:
         src=base/p['name']
         if not src.exists() and pathlib.Path(str(src)+'.bin').exists(): src=pathlib.Path(str(src)+'.bin')
         if not src.exists(): raise SystemExit(f'missing VOICEVOX part: {p["name"]}')
-        data=src.read_bytes(); actual=hashlib.sha256(data).hexdigest()
+        part_h=hashlib.sha256()
+        with src.open('rb') as f:
+            for chunk in iter(lambda: f.read(8 * 1024 * 1024), b''):
+                part_h.update(chunk); h.update(chunk); out.write(chunk)
+        actual=part_h.hexdigest()
         if actual.lower()!=p['sha256'].lower(): raise SystemExit(f'part hash mismatch: {src}')
-        out.write(data); h.update(data)
 if out_path.stat().st_size != meta['original_size']: raise SystemExit('VOICEVOX reconstructed size mismatch')
 if h.hexdigest().lower()!=meta['original_sha256'].lower(): raise SystemExit('VOICEVOX reconstructed SHA-256 mismatch')
 print('VOICEVOX SHA-256 OK:', h.hexdigest())
