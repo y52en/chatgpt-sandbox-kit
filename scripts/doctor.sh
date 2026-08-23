@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 required=(bash find sort stat sha256sum tar unzip)
-optional=(java python3 dpkg-deb xz ldd)
+optional=(java python3 dpkg-deb xz ldd node npm ffmpeg ffprobe)
 missing=0
 printf 'Host: %s %s\n' "$(uname -s)" "$(uname -m)"
 printf 'Asset roots: %s\n' "${SANDBOX_KIT_ASSET_ROOTS:-/mnt/data:$PWD}"
